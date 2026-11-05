@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Music UI Editor</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <h1>Music UI</h1>
+  <nav><div class="seg" id="modes"></div></nav>
+  <button class="btn pri" id="saveBtn">이미지 저장</button>
+</header>
+<main>
+  <section class="stage"><div id="stageBox"><div id="scale"><div id="view"></div></div></div></section>
+  <aside id="panel"></aside>
+</main>
+<div id="pop" hidden></div>
+<div id="modal" hidden></div>
+<!-- 이미지 저장용. 직접 호스팅하려면 이 파일을 내려받아 같은 폴더에 두고 경로만 바꾸세요 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="anim.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
