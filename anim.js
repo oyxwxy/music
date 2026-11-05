@@ -11,7 +11,7 @@ function vWidget() {
 <div class="wti"><b>${esc(S.title)}</b><span style="color:${sub}">${esc(S.artist)}</span></div>
 <div class="wdt" style="color:${hexA(t, .4)}">${S.wdots ? '······' : ''}</div>
 <div class="wtl" style="color:${hexA(t, .75)}">${ph ? '–:––' : fmt(S.el)}</div><div class="wbar" data-bar="el" style="background:${hexA(t, .35)}"><i style="width:${pct}%;background:${hexA(t, .85)}"></i></div><div class="wtr" style="color:${hexA(t, .75)}">${ph ? '--:--' : '-' + fmt(S.tot - S.el)}</div>
-${ab(I.rew(t, 36), 95, 122)}<span data-act="play" style="left:0;top:0">${S.wplay ? ab(I.pause(t, 26), 178, 120) : ab(I.play(t, 40), 171, 115)}</span>${ab(I.fwd(t, 36), 249, 122)}${ab(air, 331, 123)}</div></div>`;
+<span data-act="prev" style="left:0;top:0">${ab(I.rew(t, 36), 95, 122)}</span><span data-act="play" style="left:0;top:0">${S.wplay ? ab(I.pause(t, 26), 178, 120) : ab(I.play(t, 40), 171, 115)}</span><span data-act="next" style="left:0;top:0">${ab(I.fwd(t, 36), 249, 122)}</span>${ab(air, 331, 123)}</div></div>`;
 }
 
 /* ===== 내보내기 패널 ===== */
@@ -34,10 +34,13 @@ function animBox() {
   a.append(el('div', 'hint', 'GIF·영상은 투명 배경이 안 돼서 배경색이 들어가요. 켠 이벤트만 적용돼요. 재생바 속도 ×10이면 1초에 10초씩 흘러가요.<br>영상은 사파리는 MP4, 크롬은 WebM이고, 만드는 동안 창을 닫지 마세요.')); return a;
 }
 
-/* ===== 애니메이션 상태 ===== */
+/* ===== 애니메이션 상태 / 미리보기 ===== */
+const PV = { on: false, raf: 0 };
+const outBox = () => { const d = el('div'); d.append(pngBox()); if (S.mode !== 'list') { const s = el('div', 'sub'); s.append(el('h3', '', '움짤 · 영상 (왼쪽 [▶ 움직임 미리보기]로 먼저 확인해요)'), animBox()); d.append(s); } return d; };
 const easeIO = x => x * x * (3 - 2 * x);
 const mp = t => { const e = $('#mp'); if (e) e.textContent = t; };
 const tick = () => new Promise(r => setTimeout(r, 0));
+const keyOf = s => [Math.round(s.el / Math.max(1, s.tot) * 400), Math.floor(s.el), s.play, s.title, s.artist, s.np].join('|');
 function animState(t) {
   const m = S.mode, s = { el: S.el, tot: S.tot, play: m === 'widget' ? S.wplay : S.play, title: S.title, artist: S.artist, np: S.np };
   const ev = []; if (S.sk_on && m !== 'list' && m !== 'lyric') ev.push({ t: S.sk_at, k: 'sk' }); if (S.tg_on && m !== 'lyric') ev.push({ t: S.tg_at, k: 'tg' }); if (S.nx_on) ev.push({ t: S.nx_at, k: 'nx' }); ev.sort((a, b) => a.t - b.t);
@@ -50,24 +53,55 @@ function animState(t) {
   }
   adv(t); if (sk && t >= sk.t && t < sk.t + .5) s.el = sk.from + (sk.to - sk.from) * easeIO((t - sk.t) / .5); return s;
 }
-function withState(s, fn) {
+function withState(s, fn, keep) {
   const bk = { el: S.el, tot: S.tot, title: S.title, artist: S.artist, np: S.np, play: S.play, wplay: S.wplay, wph: S.wph, round: S.round, wtr: S.wtr };
-  Object.assign(S, { el: s.el, tot: s.tot, title: s.title, artist: s.artist, np: s.np, round: false, wtr: false }); if (S.mode === 'widget') { S.wplay = s.play; S.wph = false; } else S.play = s.play;
+  Object.assign(S, { el: s.el, tot: s.tot, title: s.title, artist: s.artist, np: s.np }); if (!keep) Object.assign(S, { round: false, wtr: false }); if (S.mode === 'widget') { S.wplay = s.play; S.wph = false; } else S.play = s.play;
   try { return fn(); } finally { Object.assign(S, bk); }
 }
+function pvStop() { if (!PV.on) return; PV.on = false; cancelAnimationFrame(PV.raf); const b = $('#pvBtn'); if (b) b.textContent = '▶ 움직임 미리보기'; }
 const DIM = { lyric: [390, 844, 2], list: [390, 844, 2], pad: [1024, 768, 1.5], pod: [347, 600, 2], widget: [404, 195, 3] };
+
+/* 가사 레이어: 미리보기와 저장이 같은 코드를 써요 */
+async function lyrLayer() {
+  const pad = S.mode === 'pad', w = pad ? 509 : 330, fs = pad ? S.pfs : S.fs, mb = Math.round(fs * .8), L = S.lyrics.split('\n'), n = L.length, a0 = S.cur, a1 = Math.min(n - 1, S.aend), scroll = a1 > a0, hold = .8, per = S.lt;
+  const sh = L.map(t => blurLine(t || ' ', fs, w, 0, 1)), Y = [0]; sh.forEach((r, i) => Y.push(Y[i] + r.H + mb));
+  const lv = (i, d) => { d = Math.min(d, 8); return d <= 0 ? sh[i] : blurLine(L[i] || ' ', fs, w, Math.min(1.5 + d * 1.1, 6), Math.max(.42 - d * .03, .22)); };
+  mp('가사 준비 중...'); for (let i = 0; i < n; i++) { for (let d = 1; d <= Math.min(8, n); d++) lv(i, d); if (i % 2 === 0) await tick(); }
+  const A = pad ? 256 : 205, X = pad ? 495 : 30, clip = pad ? [495, 0, 509, 768] : [30, 140, 330, 704];
+  const posAt = t => { if (!scroll || t < hold) return a0; const tr = Math.min(.6, per * .4), u = t - hold, k = Math.floor(u / per); if (k >= a1 - a0) return a1; const q = u - k * per, s = per - tr; return a0 + k + (q > s ? easeIO((q - s) / tr) : 0); };
+  const draw = (ctx, t, ox, oy) => {
+    const p = posAt(t), k = Math.min(Math.floor(p), n - 1), yp = Y[k] + (p - k) * (Y[k + 1] - Y[k]);
+    for (let i = 0; i < n; i++) {
+      const y = A + Y[i] - yp - oy; if (y > clip[3] + 20 || y + sh[i].H < -20) continue;
+      const d = Math.abs(i - p), lo = Math.floor(d), f = d - lo, put = (r, al) => { if (al <= 0) return; ctx.globalAlpha = al; ctx.drawImage(r.c, X - ox - r.pd, y - r.pd, w + 2 * r.pd, r.H + 2 * r.pd); };
+      if (lo >= 8) put(lv(i, 8), 1); else { put(lv(i, lo), 1 - f); put(lv(i, lo + 1), f); }
+    }
+    ctx.globalAlpha = 1;
+  };
+  return { span: scroll ? hold + (a1 - a0) * per + 1 : 0, clip, draw };
+}
+
+async function pvStart() {
+  pvStop(); PV.on = true; $('#pvBtn').textContent = '■ 정지'; const m = S.mode, ly = m === 'lyric' || m === 'pad';
+  let LY = null; if (ly) { try { LY = await lyrLayer(); } catch (e) { } } if (!PV.on) return;
+  const total = Math.max(S.adur, LY ? LY.span : 0), view = $('#view'), t0 = performance.now(); let lastK = '', cv = null, cx = null;
+  const step = now => {
+    if (!PV.on) return; const t = Math.min(total, ((now - t0) / 1000) % (total + .8)), s = animState(t), k = keyOf(s);
+    if (k !== lastK) {
+      lastK = k; withState(s, () => renderInto(view, false), true);
+      if (LY) { const box = $('.ly', view); box.innerHTML = ''; cv = document.createElement('canvas'); cv.width = LY.clip[2] * 2; cv.height = LY.clip[3] * 2; cv.style.cssText = 'width:100%;height:100%;display:block'; box.append(cv); cx = cv.getContext('2d'); }
+    }
+    if (LY && cx) { cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, cv.width, cv.height); cx.setTransform(2, 0, 0, 2, 0, 0); LY.draw(cx, t, LY.clip[0], LY.clip[1]); }
+    PV.raf = requestAnimationFrame(step);
+  };
+  PV.raf = requestAnimationFrame(step);
+}
+
 async function prepAnim(kind) {
-  const m = S.mode, ly = m === 'lyric' || m === 'pad', BF = 10, pad = m === 'pad', w = pad ? 509 : 330, fs = pad ? S.pfs : S.fs, mb = Math.round(fs * .8), L = S.lyrics.split('\n'), n = L.length, a0 = S.cur, a1 = Math.min(n - 1, S.aend), scroll = ly && a1 > a0, hold = .8, per = S.lt;
-  const total = Math.max(S.adur, scroll ? hold + (a1 - a0) * per + 1 : 0), N = Math.floor(total * BF) + 1;
-  const keyOf = s => [Math.round(s.el / Math.max(1, s.tot) * 400), Math.floor(s.el), s.play, s.title, s.artist, s.np].join('|'), map = new Map(), ids = [], sts = [];
+  const m = S.mode, ly = m === 'lyric' || m === 'pad', BF = 10, LY = ly ? await lyrLayer() : null, total = Math.max(S.adur, LY ? LY.span : 0), N = Math.floor(total * BF) + 1, map = new Map(), ids = [], sts = [];
   for (let i = 0; i < N; i++) { const s = animState(i / BF), k = keyOf(s); if (!map.has(k)) { map.set(k, sts.length); sts.push(s); } ids.push(map.get(k)); }
   const [pw, ph, cap] = DIM[m], sc = kind === 'gif' ? S.gsc : Math.min(cap, Math.max(1, Math.sqrt(150e6 / (sts.length * pw * ph * 4))));
-  let sh, Y, lv; if (ly) {
-    sh = L.map(t => blurLine(t || ' ', fs, w, 0, 1)); Y = [0]; sh.forEach((r, i) => Y.push(Y[i] + r.H + mb));
-    lv = (i, d) => { d = Math.min(d, 8); return d <= 0 ? sh[i] : blurLine(L[i] || ' ', fs, w, Math.min(1.5 + d * 1.1, 6), Math.max(.42 - d * .03, .22)); };
-    mp('가사 준비 중...'); for (let i = 0; i < n; i++) { for (let d = 1; d <= Math.min(8, n); d++) lv(i, d); if (i % 2 === 0) await tick(); }
-  }
-  const h = el('div'); h.style.cssText = 'position:fixed;left:-99999px;top:0'; document.body.append(h); const bases = [];
+  mp('배경 만드는 중...'); const h = el('div'); h.style.cssText = 'position:fixed;left:-99999px;top:0'; document.body.append(h); const bases = [];
   try {
     for (let i = 0; i < sts.length; i++) {
       mp(`화면 만드는 중... ${i + 1}/${sts.length}`); withState(sts[i], () => renderInto(h, false, sc)); if (ly) $('.ly', h).style.display = 'none';
@@ -75,18 +109,9 @@ async function prepAnim(kind) {
       bases.push(await html2canvas(h.firstElementChild, { scale: sc, backgroundColor: null, logging: false })); await tick();
     }
   } finally { h.remove(); }
-  const A = pad ? 256 : 205, X = pad ? 495 : 30, clip = pad ? [495, 0, 509, 768] : [30, 140, 330, 704];
-  const posAt = t => { if (!scroll || t < hold) return a0; const tr = Math.min(.6, per * .4), u = t - hold, k = Math.floor(u / per); if (k >= a1 - a0) return a1; const q = u - k * per, s = per - tr; return a0 + k + (q > s ? easeIO((q - s) / tr) : 0); };
   const draw = (ctx, t) => {
-    t = Math.min(t, total); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.drawImage(bases[ids[Math.min(N - 1, Math.floor(t * BF))]], 0, 0); if (!ly) return;
-    const p = posAt(t), k = Math.min(Math.floor(p), n - 1), yp = Y[k] + (p - k) * (Y[k + 1] - Y[k]);
-    ctx.setTransform(sc, 0, 0, sc, 0, 0); ctx.save(); ctx.beginPath(); ctx.rect(...clip); ctx.clip();
-    for (let i = 0; i < n; i++) {
-      const y = A + Y[i] - yp; if (y > clip[1] + clip[3] + 20 || y + sh[i].H < clip[1] - 20) continue;
-      const d = Math.abs(i - p), lo = Math.floor(d), f = d - lo, put = (r, al) => { if (al <= 0) return; ctx.globalAlpha = al; ctx.drawImage(r.c, X - r.pd, y - r.pd, w + 2 * r.pd, r.H + 2 * r.pd); };
-      if (lo >= 8) put(lv(i, 8), 1); else { put(lv(i, lo), 1 - f); put(lv(i, lo + 1), f); }
-    }
-    ctx.restore(); ctx.globalAlpha = 1;
+    t = Math.min(t, total); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.drawImage(bases[ids[Math.min(N - 1, Math.floor(t * BF))]], 0, 0); if (!LY) return;
+    ctx.setTransform(sc, 0, 0, sc, 0, 0); ctx.save(); ctx.beginPath(); ctx.rect(...LY.clip); ctx.clip(); LY.draw(ctx, t, 0, 0); ctx.restore(); ctx.globalAlpha = 1;
   };
   return { W: bases[0].width, H: bases[0].height, total, draw };
 }

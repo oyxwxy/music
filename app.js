@@ -22,7 +22,7 @@ const S = {
   tracks: [{ t: '겨울이오면', a: '다이나믹 듀오', img: '' }, { t: 'Remember', a: 'Sam Ock', img: '' }, { t: 'Thousand Trips', a: 'WELOVE', img: '' }, { t: '눈이 내리면', a: '도', img: '' }],
   pclock: { h: 11, m: 31, ap: 'PM' }, pdate: 'Thu Sep 26', batt: 87, vol: 12, shuf: true, rep: false, play: true, pfs: 44,
   tot: 229, el: 2, podb: '#cfcfcf', podw: '#ffffff', bar: 'Now Playing', pshuf: true, pbatt: 100,
-  lfs: 100, wtr: true, coverSrc: '', adur: 6, arate: 10, sk_on: false, sk_at: 2, sk_to: 120, tg_on: false, tg_at: 2, nx_on: false, nx_at: 3, nx_title: 'Next Song', nx_artist: 'Artist', nx_tot: 200,
+  fav: false, live: false, lfs: 100, wtr: true, coverSrc: '', adur: 6, arate: 10, sk_on: false, sk_at: 2, sk_to: 120, tg_on: false, tg_at: 2, nx_on: false, nx_at: 3, nx_title: 'Next Song', nx_artist: 'Artist', nx_tot: 200,
   aend: 4, lt: 2.5, gsc: .75, wc: '#969696', wt: '#f6f6f6', wbg: '#efefef', wph: true, wplay: false, wdots: true
 };
 
@@ -31,7 +31,7 @@ const I = {
   sig: c => `<svg width="18" height="12" viewBox="0 0 18 12" fill="${c}"><rect y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" width="3" height="12" rx="1"/></svg>`,
   wifi: c => `<svg width="17" height="12" viewBox="0 0 17 12" fill="${c}"><path d="M8.5 2.3c2.3 0 4.4.9 6 2.4l1.1-1.2A10.7 10.7 0 0 0 8.5.6C5.7.6 3.2 1.7 1.4 3.5l1.1 1.2a8.700 8.700 0 0 1 6-2.400zm0 3.700c1.300 0 2.500.5 3.400 1.300l1.100-1.200a7 7 0 0 0-9 0l1.100 1.200c.9-.8 2.100-1.300 3.400-1.300zm0 3.500c-.7 0-1.300.3-1.800.7l1.800 2 1.800-2c-.5-.4-1.100-.7-1.800-.7z"/></svg>`,
   bat: (c, p = 100) => `<svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="22" height="12" rx="3.500" fill="none" stroke="${c}" opacity=".4"/><rect x="2" y="2" width="${Math.max(1, 19 * p / 100)}" height="9" rx="2" fill="${c}"/><path d="M24 4.500v4c.8-.3 1.500-1.100 1.500-2s-.7-1.700-1.500-2z" fill="${c}" opacity=".45"/></svg>`,
-  star: c => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.700 5.600 6.100.9-4.400 4.300 1 6.100L12 17l-5.400 2.900 1-6.100L3.200 9.500l6.100-.9z"/></svg>`,
+  star: (c, f) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="${f ? c : 'none'}" stroke="${c}" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.700 5.600 6.100.9-4.400 4.300 1 6.100L12 17l-5.400 2.900 1-6.100L3.200 9.500l6.100-.9z"/></svg>`,
   ell: c => `<svg width="16" height="16" viewBox="0 0 16 16" fill="${c}"><circle cx="2.500" cy="8" r="1.600"/><circle cx="8" cy="8" r="1.600"/><circle cx="13.500" cy="8" r="1.600"/></svg>`,
   shuf: (c, w = 26) => `<svg width="${w}" height="${w * .77}" viewBox="0 0 26 20" fill="none" stroke="${c}" stroke-width="2.400" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5h4c5 0 6 10 11 10h4M1 15h4c2 0 3.500-1 4.500-2.500M13 7c1-1.200 2.200-2 4-2h3M20 1.500L23.500 5 20 8.500M20 11.500l3.500 3.500-3.500 3.500"/></svg>`,
   rep: c => `<svg width="24" height="20" viewBox="0 0 24 20" fill="none" stroke="${c}" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h14l-3-3M20 13H6l3 3"/></svg>`,
@@ -85,15 +85,15 @@ const clock24 = () => `${S.clock.h}:${p2(S.clock.m)}`;
 function sb(c) { return S.sbar ? `<div class="sb" style="color:${c}"><span>${clock24()}</span><span>${I.sig(c)}${I.wifi(c)}${I.bat(c)}</span></div>` : ''; }
 function vLyric() {
   return `<div class="phone lyric ${S.round ? 'r' : ''}"><div class="bgc" data-w="390" data-h="844" data-k="lyric"></div>${sb('#fff')}<div class="grab"></div>
-<div class="lh"><div class="cv" style="${img(S.cover)}"></div><div class="t"><b>${esc(S.title)}</b><span>${esc(S.artist)}</span></div><div class="bt">${S.star ? `<div class="dots">${I.star('#fff')}</div>` : ''}<div class="dots">${I.ell('#fff')}</div></div></div>
+<div class="lh"><div class="cv" style="${img(S.cover)}"></div><div class="t"><b>${esc(S.title)}</b><span>${esc(S.artist)}</span></div><div class="bt">${S.star ? `<div class="dots" data-act="fav">${I.star('#fff', S.fav)}</div>` : ''}<div class="dots">${I.ell('#fff')}</div></div></div>
 <div class="ly" data-t="65"><div class="in">${lyricHTML(330, S.fs)}</div></div></div>`;
 }
 function vList() {
-  const fg = S.dark ? '#fff' : '#000', rows = S.tracks.map((t, i) => `<div class="tr"><div class="th" style="${img(t.img)}"></div><div class="x"><div><b>${esc(t.t)}</b><small>${esc(t.a)}</small></div>${I.ell(S.dark ? '#fff' : '#222')}</div></div>`).join('');
+  const fg = S.dark ? '#fff' : '#000', rows = S.tracks.map((t, i) => `<div class="tr" data-act="row" data-i="${i}"><div class="th" style="${img(t.img)}"></div><div class="x"><div><b>${esc(t.t)}</b><small>${esc(t.a)}</small></div>${I.ell(S.dark ? '#fff' : '#222')}</div></div>`).join('');
   const np = S.tracks[S.np - 1];
   return `<div class="phone list ${S.dark ? 'dk' : ''} ${S.round ? 'r' : ''}" style="--k:${S.lfs / 100}">${sb(fg)}<div class="lcov" style="${img(S.cover)}"></div><h2>${esc(S.lname)}</h2><div class="art">${esc(S.lart)}</div><div class="upd">${esc(S.upd)}</div>
-<div class="btns"><div>${I.play('#fa2d48', 16)}재생</div><div>${I.shuf('#fa2d48', 20)}임의 재생</div></div><div class="tl">${rows}</div>
-${np ? `<div class="mini"><div class="th" style="${img(np.img || S.cover)}"></div><b>${esc(np.t)}</b><span data-act="play">${S.play ? I.pause(fg, 22) : I.play(fg, 22)}</span>${I.fwd(fg, 34)}</div>` : ''}
+<div class="btns"><div data-act="playall">${I.play('#fa2d48', 16)}재생</div><div data-act="shufall">${I.shuf('#fa2d48', 20)}임의 재생</div></div><div class="tl">${rows}</div>
+${np ? `<div class="mini"><div class="th" style="${img(np.img || S.cover)}"></div><b>${esc(np.t)}</b><span class="ic" data-act="play">${S.play ? I.pause(fg, 17) : I.play(fg, 19)}</span><span class="ic" data-act="next">${I.fwd(fg, 29)}</span></div>` : ''}
 <div class="tabbar">${I.tabs('#8e8e93', '#fa2d48').join('')}</div></div>`;
 }
 function vPad() {
@@ -101,9 +101,9 @@ function vPad() {
   return `<div class="pad ${S.round ? 'r' : ''}"><div class="bgc" data-w="1024" data-h="768" data-k="pad"></div>
 <div class="psb a"><span>${pc.h}:${p2(pc.m)} ${pc.ap}&nbsp;&nbsp;${esc(S.pdate)}</span><span>${I.wifi('#fff')}${S.batt}%${I.bat('#fff', S.batt)}</span></div>
 <div class="pcv a" style="${img(S.cover)}"></div>
-<div class="pti a"><b>${esc(S.title)}</b><span>${esc(S.artist)}</span></div><div class="pbt a">${S.star ? `<div class="dots">${I.star('#fff')}</div>` : ''}<div class="dots">${I.ell('#fff')}</div></div>
+<div class="pti a"><b>${esc(S.title)}</b><span>${esc(S.artist)}</span></div><div class="pbt a">${S.star ? `<div class="dots" data-act="fav">${I.star('#fff', S.fav)}</div>` : ''}<div class="dots">${I.ell('#fff')}</div></div>
 <div class="bar a" data-bar="el" style="top:530px"><i style="width:${pct}%"></i></div><div class="tt a"><span>${fmt(el)}</span><span>-${fmt(S.tot - el)}</span></div>
-<div class="cr a"><div class="rb ${S.shuf ? 'on' : ''}">${I.shuf('#fff', 24)}</div>${I.rew('#fff', 44)}<span data-act="play" style="cursor:pointer">${S.play ? I.pause('#fff', 30) : I.play('#fff', 34)}</span>${I.fwd('#fff', 44)}<div class="rb ${S.rep ? 'on' : ''}">${I.rep('#fff')}</div></div>
+<div class="cr a"><div class="rb ${S.shuf ? 'on' : ''}" data-act="shuf">${I.shuf('#fff', 24)}</div><span data-act="prev">${I.rew('#fff', 44)}</span><span data-act="play" style="cursor:pointer">${S.play ? I.pause('#fff', 30) : I.play('#fff', 34)}</span><span data-act="next">${I.fwd('#fff', 44)}</span><div class="rb ${S.rep ? 'on' : ''}" data-act="rep">${I.rep('#fff')}</div></div>
 <div class="bar a" data-bar="vol" style="top:672px"><i style="width:${S.vol}%"></i></div>
 <div class="ly" data-t="256"><div class="in">${lyricHTML(509, S.pfs)}</div></div></div>`;
 }
@@ -116,9 +116,9 @@ function vPod() {
 <div class="ptx"><b>${esc(S.title)}</b><span>${esc(S.artist)}</span><span>${esc(S.album)}</span></div>
 <div class="pbar" data-bar="el"><i style="left:calc(${S.tot ? S.el / S.tot * 100 : 0}% - 1px)"></i></div><div class="pt"><span>${fmt(S.el)}</span><span>-${fmt(S.tot - S.el)}</span></div></div>
 <div class="wheel" style="background:${w};color:${wt}"><span class="w" style="left:0;right:0;top:22px;text-align:center;font-size:19px">MENU</span>
-<span class="w" style="left:28px;top:107px"><svg width="32" height="20" viewBox="0 0 32 22" fill="${wt}"><rect y="1" width="4" height="20"/><path d="M6 11L18 1v20zM18 11L30 1v20z"/></svg></span>
-<span class="w" style="right:28px;top:107px"><svg width="32" height="20" viewBox="0 0 32 22" fill="${wt}"><rect x="28" y="1" width="4" height="20"/><path d="M26 11L14 1v20zM14 11L2 1v20z"/></svg></span>
-<span class="w" id="pp" style="left:0;right:0;bottom:20px;display:flex;justify-content:center"><svg width="34" height="20" viewBox="0 0 34 20" fill="${wt}"><path d="M2 1l12 9L2 19z"/><rect x="19" y="1" width="5" height="18"/><rect x="27" y="1" width="5" height="18"/></svg></span>
+<span class="w" data-act="prev" style="left:14px;top:92px;width:60px;height:50px;display:flex;align-items:center;justify-content:center"><svg width="32" height="20" viewBox="0 0 32 22" fill="${wt}"><rect y="1" width="4" height="20"/><path d="M6 11L18 1v20zM18 11L30 1v20z"/></svg></span>
+<span class="w" data-act="next" style="right:14px;top:92px;width:60px;height:50px;display:flex;align-items:center;justify-content:center"><svg width="32" height="20" viewBox="0 0 32 22" fill="${wt}"><rect x="28" y="1" width="4" height="20"/><path d="M26 11L14 1v20zM14 11L2 1v20z"/></svg></span>
+<span class="w" id="pp" data-act="play" style="left:75px;right:75px;bottom:8px;height:44px;display:flex;align-items:center;justify-content:center"><svg width="34" height="20" viewBox="0 0 34 20" fill="${wt}"><path d="M2 1l12 9L2 19z"/><rect x="19" y="1" width="5" height="18"/><rect x="27" y="1" width="5" height="18"/></svg></span>
 <div class="c" style="background:radial-gradient(${shade(w, -.03)},${shade(w, -.1)})"></div></div></div>`;
 }
 const VIEWS = { lyric: vLyric, list: vList, pad: vPad, pod: vPod, widget: vWidget };
@@ -132,14 +132,13 @@ function hiSvg(root, sc) {
 function renderInto(root, live, sc) {
   root.innerHTML = VIEWS[S.mode](); paintBg(root); if (sc) hiSvg(root, sc);
   const ly = $('.ly', root), a = ly && $('.a', ly); if (a) $('.in', ly).style.transform = `translateY(${+ly.dataset.t - a.offsetTop}px)`;
-  const pp = $('#pp', root); if (pp && live) pp.onclick = () => { S.play = !S.play; render(); upd(); };
 }
-function render() { renderInto($('#view'), true); fit(); }
+function render() { pvStop(); renderInto($('#view'), true); fit(); $('#pvBtn').hidden = S.mode === 'list'; }
 function fit() {
   const v = $('#view').firstElementChild; if (!v) return; const w = v.offsetWidth, h = v.offsetHeight, bx = $('.stage').clientWidth - 24;
   const s = Math.min(1, bx / w, (innerHeight - 110) / h > .4 ? (innerHeight - 110) / h : 1); $('#scale').style.transform = `scale(${s})`; $('#stageBox').style.cssText = `width:${w * s}px;height:${h * s}px`; $('#scale').style.width = w + 'px';
 }
-$('#view').addEventListener('click', e => { const l = e.target.closest('[data-i]'); if (l) { S.cur = +l.dataset.i; render(); upd(); } });
+$('#view').addEventListener('click', e => { const l = e.target.closest('.ln'); if (l) { S.cur = +l.dataset.i; render(); upd(); } });
 
 /* ===== 컨트롤 ===== */
 let ups = []; const upd = () => ups.forEach(f => f());
@@ -185,9 +184,9 @@ function coverCtl() {
   const pick = file => loadImg(file, (u, src) => { S.cover = u; S.coverSrc = src; extract(u, (a, b, c) => { S.c1 = a; S.c2 = b; S.c3 = c; render(); upd(); }); });
   th.onclick = () => f.click(); f.onchange = () => { pick(f.files[0]); f.value = ''; };
   w.ondragover = e => { e.preventDefault(); w.classList.add('drag'); }; w.ondragleave = () => w.classList.remove('drag'); w.ondrop = e => { e.preventDefault(); w.classList.remove('drag'); pick(e.dataTransfer.files[0]); };
-  const b1 = el('button', 'btn sm', '파일 선택'), b2 = el('button', 'btn sm', '색 다시 추출'), b3 = el('button', 'btn sm', '삭제'), b4 = el('button', 'btn sm', '색 정밀 추출'), b5 = el('button', 'btn sm', '다시 자르기');
-  b1.onclick = () => f.click(); b2.onclick = () => S.cover && extract(S.cover, (a, b, c) => { S.c1 = a; S.c2 = b; S.c3 = c; render(); upd(); }); b3.onclick = () => set('cover', ''); b4.onclick = () => openSampler({ keys: SMPK[S.mode] }); b5.onclick = () => S.coverSrc ? openCropper(S.coverSrc, u => { S.cover = u; render(); upd(); }) : alert('새로 올린 이미지부터 다시 자를 수 있어요.');
-  bs.append(b1, b5, b2, b4, b3, el('div', 'hint', '이미지를 끌어다 놓아도 돼요.<br>올리면 배경색이 자동으로 정해져요.')); w.append(th, f, bs);
+  const b1 = el('button', 'btn sm', '파일 선택'), b3 = el('button', 'btn sm', '삭제'), b4 = el('button', 'btn sm', '색 정밀 추출'), b5 = el('button', 'btn sm', '다시 자르기');
+  b1.onclick = () => f.click(); b3.onclick = () => set('cover', ''); b4.onclick = () => openSampler({ keys: SMPK[S.mode] }); b5.onclick = () => S.coverSrc ? openCropper(S.coverSrc, u => { S.cover = u; render(); upd(); }) : alert('새로 올린 이미지부터 다시 자를 수 있어요.');
+  bs.append(b1, b5, b4, b3, el('div', 'hint', '이미지를 끌어다 놓아도 돼요.<br>올리면 배경색이 자동으로 정해져요.')); w.append(th, f, bs);
   ups.push(() => { th.style.backgroundImage = S.cover ? `url(${S.cover})` : ''; th.textContent = S.cover ? '' : '이미지'; }); return w;
 }
 function trackEd() {
@@ -203,11 +202,11 @@ function trackEd() {
 /* ===== 패널 구성 ===== */
 const MODES = [['lyric', '가사'], ['list', '재생목록'], ['pad', '아이패드'], ['pod', '아이팟'], ['widget', '잠금화면']];
 const PAGES = {
-  lyric: [['info', '곡'], ['lyr', '가사'], ['look', '디자인'], ['png', '저장'], ['anim', '움짤']],
-  list: [['info', '정보'], ['trk', '곡 목록'], ['look', '디자인'], ['png', '저장'], ['anim', '움짤']],
-  pad: [['info', '곡'], ['lyr', '가사'], ['play', '재생'], ['look', '디자인'], ['png', '저장'], ['anim', '움짤']],
-  pod: [['info', '곡'], ['play', '재생'], ['look', '디자인'], ['png', '저장'], ['anim', '움짤']],
-  widget: [['info', '곡'], ['play', '재생'], ['look', '디자인'], ['png', '저장'], ['anim', '움짤']]
+  lyric: [['info', '곡'], ['lyr', '가사'], ['look', '디자인'], ['out', '내보내기']],
+  list: [['info', '정보'], ['trk', '곡 목록'], ['look', '디자인'], ['out', '내보내기']],
+  pad: [['info', '곡'], ['lyr', '가사'], ['play', '재생'], ['look', '디자인'], ['out', '내보내기']],
+  pod: [['info', '곡'], ['play', '재생'], ['look', '디자인'], ['out', '내보내기']],
+  widget: [['info', '곡'], ['play', '재생'], ['look', '디자인'], ['out', '내보내기']]
 };
 const PG = {};
 function buildPanel() {
@@ -229,7 +228,7 @@ function buildPanel() {
   const X = {
     info: () => [m === 'list' ? plist() : song()], lyr: () => [lyr()], trk: () => [card('곡 목록 (▶ = 현재 재생 곡, 썸네일을 눌러 이미지 변경)', trackEd())],
     play: () => [card('재생 상태', ...prog, TG(m === 'widget' ? 'wplay' : 'play', '재생 중 (끄면 ▶)'), ...(m === 'widget' ? [TG('wph', '시간 대기 표시 (–:––)')] : []), ...(m === 'pad' ? [F('볼륨', RG('vol', 0, 100, 1, v => v + '%')), TG('shuf', '셔플 켜짐'), TG('rep', '반복 켜짐')] : []))],
-    look: () => LOOK[m](), png: () => [card('이미지 저장', pngBox())], anim: () => [card('움짤 · 영상', animBox())]
+    look: () => LOOK[m](), out: () => [card('내보내기', outBox())]
   };
   X[PG[m]]().forEach(c => p.append(c)); upd();
 }
@@ -296,10 +295,28 @@ $('#saveBtn').onclick = save;
 let drag = null;
 const dragMv = e => { if (!drag) return; const f = Math.min(1, Math.max(0, (e.clientX - drag.r.left) / drag.r.width)); if (drag.k === 'vol') set('vol', Math.round(f * 100)); else { if (S.mode === 'widget') S.wph = false; set('el', Math.round(f * S.tot)); } };
 $('#view').addEventListener('pointerdown', e => {
-  if (e.target.closest('[data-act]')) { const k = S.mode === 'widget' ? 'wplay' : 'play'; set(k, !S[k]); return; }
   const b = e.target.closest('[data-bar]'); if (!b) return; e.preventDefault(); drag = { k: b.dataset.bar, r: b.getBoundingClientRect() }; dragMv(e);
 });
 addEventListener('pointermove', dragMv); addEventListener('pointerup', () => drag = null); addEventListener('pointercancel', () => drag = null);
+
+/* ===== 실제 앱처럼 동작 ===== */
+const swapTrack = () => { [S.title, S.nx_title] = [S.nx_title, S.title]; [S.artist, S.nx_artist] = [S.nx_artist, S.artist]; [S.tot, S.nx_tot] = [S.nx_tot, S.tot]; S.el = 0; };
+function act(a, d) {
+  const w = S.mode === 'widget', pk = w ? 'wplay' : 'play', list = S.mode === 'list';
+  if (a === 'play') { S[pk] = !S[pk]; S.live = S[pk]; if (w) S.wph = false; }
+  else if (a === 'next') { if (list) { S.np = S.np < S.tracks.length ? S.np + 1 : 1; S.play = true; } else swapTrack(); }
+  else if (a === 'prev') { if (list) S.np = Math.max(1, S.np - 1); else if (S.el > 3) S.el = 0; else swapTrack(); }
+  else if (a === 'shuf') S.shuf = !S.shuf; else if (a === 'rep') S.rep = !S.rep; else if (a === 'fav') S.fav = !S.fav;
+  else if (a === 'row') { S.np = +d + 1; S.play = true; }
+  else if (a === 'playall') { S.np = 1; S.play = true; } else if (a === 'shufall') { S.np = 1 + Math.floor(Math.random() * S.tracks.length); S.play = true; }
+  render(); upd();
+}
+$('#view').addEventListener('click', e => { const a = e.target.closest('[data-act]'); if (a) act(a.dataset.act, a.dataset.i); });
+setInterval(() => {
+  const w = S.mode === 'widget', on = w ? S.wplay : S.play; if (!S.live || !on || PV.on || !['pad', 'pod', 'widget'].includes(S.mode) || drag) return;
+  S.el += 1; if (S.el >= S.tot) { if (S.rep) S.el = 0; else swapTrack(); } render(); upd();
+}, 1000);
+$('#pvBtn').onclick = () => { if (PV.on) { pvStop(); render(); } else pvStart(); };
 
 /* ===== 시작 ===== */
 addEventListener('resize', fit);
