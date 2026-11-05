@@ -22,7 +22,7 @@ const S = {
   tracks: [{ t: '겨울이오면', a: '다이나믹 듀오', img: '' }, { t: 'Remember', a: 'Sam Ock', img: '' }, { t: 'Thousand Trips', a: 'WELOVE', img: '' }, { t: '눈이 내리면', a: '도', img: '' }],
   pclock: { h: 11, m: 31, ap: 'PM' }, pdate: 'Thu Sep 26', batt: 87, vol: 12, shuf: true, rep: false, play: true, pfs: 44,
   tot: 229, el: 2, podb: '#cfcfcf', podw: '#ffffff', bar: 'Now Playing', pshuf: true, pbatt: 100,
-  coverSrc: '', adur: 6, arate: 10, sk_on: false, sk_at: 2, sk_to: 120, tg_on: false, tg_at: 2, nx_on: false, nx_at: 3, nx_title: 'Next Song', nx_artist: 'Artist', nx_tot: 200,
+  lfs: 100, wtr: true, coverSrc: '', adur: 6, arate: 10, sk_on: false, sk_at: 2, sk_to: 120, tg_on: false, tg_at: 2, nx_on: false, nx_at: 3, nx_title: 'Next Song', nx_artist: 'Artist', nx_tot: 200,
   aend: 4, lt: 2.5, gsc: .75, wc: '#969696', wt: '#f6f6f6', wbg: '#efefef', wph: true, wplay: false, wdots: true
 };
 
@@ -91,8 +91,8 @@ function vLyric() {
 function vList() {
   const fg = S.dark ? '#fff' : '#000', rows = S.tracks.map((t, i) => `<div class="tr"><div class="th" style="${img(t.img)}"></div><div class="x"><div><b>${esc(t.t)}</b><small>${esc(t.a)}</small></div>${I.ell(S.dark ? '#fff' : '#222')}</div></div>`).join('');
   const np = S.tracks[S.np - 1];
-  return `<div class="phone list ${S.dark ? 'dk' : ''} ${S.round ? 'r' : ''}">${sb(fg)}<div class="lcov" style="${img(S.cover)}"></div><h2>${esc(S.lname)}</h2><div class="art">${esc(S.lart)}</div><div class="upd">${esc(S.upd)}</div>
-<div class="btns"><div>${I.play('#fa2d48')}재생</div><div>${I.shuf('#fa2d48', 22)}임의 재생</div></div><div class="tl">${rows}</div>
+  return `<div class="phone list ${S.dark ? 'dk' : ''} ${S.round ? 'r' : ''}" style="--k:${S.lfs / 100}">${sb(fg)}<div class="lcov" style="${img(S.cover)}"></div><h2>${esc(S.lname)}</h2><div class="art">${esc(S.lart)}</div><div class="upd">${esc(S.upd)}</div>
+<div class="btns"><div>${I.play('#fa2d48', 16)}재생</div><div>${I.shuf('#fa2d48', 20)}임의 재생</div></div><div class="tl">${rows}</div>
 ${np ? `<div class="mini"><div class="th" style="${img(np.img || S.cover)}"></div><b>${esc(np.t)}</b><span data-act="play">${S.play ? I.pause(fg, 22) : I.play(fg, 22)}</span>${I.fwd(fg, 34)}</div>` : ''}
 <div class="tabbar">${I.tabs('#8e8e93', '#fa2d48').join('')}</div></div>`;
 }
@@ -221,10 +221,10 @@ function buildPanel() {
   const lyr = () => card('가사', F('가사 (한 줄에 한 문장)', TA('lyrics')), F('현재 줄 (미리보기의 줄을 눌러도 돼요)', STP('cur', () => S.lyrics.split('\n').length - 1)), F('가사 글자 크기', m === 'pad' ? RG('pfs', 30, 60, 1, v => v + 'px') : RG('fs', 22, 40, 1, v => v + 'px')));
   const LOOK = {
     lyric: () => [cols, card('화면', TG('star', '별(즐겨찾기) 버튼'), ...sbar)],
-    list: () => [card('화면', TG('dark', '다크 모드'), ...sbar)],
+    list: () => [card('화면', TG('dark', '다크 모드'), F('글자 크기', RG('lfs', 70, 120, 1, v => v + '%')), ...sbar)],
     pad: () => [cols, card('화면', TG('star', '별(즐겨찾기) 버튼')), card('상단 상태바', F('시간', TM({ get: () => S.pclock.h, set: n => mut(() => S.pclock.h = n), min: 1, max: 12 }, { get: () => S.pclock.m, set: n => mut(() => S.pclock.m = n), min: 0, max: 59, pad: 1 })), F('오전 / 오후', SEG('pclockap', [['AM', 'AM'], ['PM', 'PM']])), F('날짜', T('pdate')), F('배터리', RG('batt', 1, 100, 1, v => v + '%')))],
     pod: () => [card('아이팟', F('본체 프리셋', SEG('podpre', [['silver', '실버'], ['black', '블랙'], ['white', '화이트']], v => { const q = { silver: ['#cfcfcf', '#ffffff'], black: ['#262626', '#333333'], white: ['#f2f2f2', '#ffffff'] }[v]; S.podb = q[0]; S.podw = q[1]; })), two(F('본체 색', COL('podb')), F('휠 색', COL('podw'))), F('상단 문구', T('bar')), F('배터리', RG('pbatt', 5, 100, 1, v => v + '%')), TG('pshuf', '셔플 아이콘'))],
-    widget: () => [card('잠금화면 플레이어', two(F('카드 색', COL('wc')), F('글자 색', COL('wt'))), F('바깥 배경 색', COL('wbg')), TG('wdots', '우측 상단 점선'))]
+    widget: () => [card('잠금화면 플레이어', two(F('카드 색', COL('wc')), F('글자 색', COL('wt'))), TG('wtr', '바깥 배경 투명 (PNG)'), F('바깥 배경 색 (투명을 끄면 적용)', COL('wbg')), TG('wdots', '우측 상단 점선'))]
   };
   const X = {
     info: () => [m === 'list' ? plist() : song()], lyr: () => [lyr()], trk: () => [card('곡 목록 (▶ = 현재 재생 곡, 썸네일을 눌러 이미지 변경)', trackEd())],

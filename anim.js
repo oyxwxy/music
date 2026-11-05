@@ -6,7 +6,7 @@ function vWidget() {
   const t = S.wt, sub = hexA(t, .55), ph = S.wph, pct = ph || !S.tot ? 0 : S.el / S.tot * 100;
   const air = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${hexA(t, .55)}" stroke-width="1.800" stroke-linecap="round"><path d="M5.500 17.500A9 9 0 1 1 18.500 17.500"/><path d="M8.600 14.600A4.800 4.800 0 1 1 15.400 14.600"/><path d="M12 14.500l5.500 6h-11z" fill="${hexA(t, .55)}" stroke="none"/></svg>`;
   const ab = (h, l, tp) => `<span style="position:absolute;left:${l}px;top:${tp}px">${h}</span>`;
-  return `<div class="wid ${S.round ? 'r' : ''}" style="background:${S.wbg}"><div class="wcard" style="background:${S.wc};color:${t}">
+  return `<div class="wid ${S.round ? 'r' : ''}" style="background:${S.wtr ? 'transparent' : S.wbg}"><div class="wcard" style="background:${S.wc};color:${t}">
 <div class="wcv" style="${img(S.cover)}"></div>
 <div class="wti"><b>${esc(S.title)}</b><span style="color:${sub}">${esc(S.artist)}</span></div>
 <div class="wdt" style="color:${hexA(t, .4)}">${S.wdots ? '······' : ''}</div>
@@ -31,7 +31,7 @@ function animBox() {
   if (m !== 'list') a.append(F('다음 곡 제목', T('nx_title')), F('다음 곡 아티스트', T('nx_artist')), F('다음 곡 길이 (분 : 초)', dTM('nx_tot')));
   a.append(F('GIF 크기', SEG('gsc', [[.5, '작게'], [.75, '보통'], [1, '크게']])));
   const g = el('div', 'cvc'), b2 = el('button', 'btn pri', 'GIF 움짤'), b3 = el('button', 'btn pri', '영상'); b2.onclick = () => exportAnim('gif'); b3.onclick = () => exportAnim('video'); g.append(b2, b3); a.append(g);
-  a.append(el('div', 'hint', '켠 이벤트만 적용돼요. 재생바 속도 ×10이면 1초에 10초씩 흘러가요.<br>영상은 사파리는 MP4, 크롬은 WebM이고, 만드는 동안 창을 닫지 마세요.')); return a;
+  a.append(el('div', 'hint', 'GIF·영상은 투명 배경이 안 돼서 배경색이 들어가요. 켠 이벤트만 적용돼요. 재생바 속도 ×10이면 1초에 10초씩 흘러가요.<br>영상은 사파리는 MP4, 크롬은 WebM이고, 만드는 동안 창을 닫지 마세요.')); return a;
 }
 
 /* ===== 애니메이션 상태 ===== */
@@ -51,8 +51,8 @@ function animState(t) {
   adv(t); if (sk && t >= sk.t && t < sk.t + .5) s.el = sk.from + (sk.to - sk.from) * easeIO((t - sk.t) / .5); return s;
 }
 function withState(s, fn) {
-  const bk = { el: S.el, tot: S.tot, title: S.title, artist: S.artist, np: S.np, play: S.play, wplay: S.wplay, wph: S.wph, round: S.round };
-  Object.assign(S, { el: s.el, tot: s.tot, title: s.title, artist: s.artist, np: s.np, round: false }); if (S.mode === 'widget') { S.wplay = s.play; S.wph = false; } else S.play = s.play;
+  const bk = { el: S.el, tot: S.tot, title: S.title, artist: S.artist, np: S.np, play: S.play, wplay: S.wplay, wph: S.wph, round: S.round, wtr: S.wtr };
+  Object.assign(S, { el: s.el, tot: s.tot, title: s.title, artist: s.artist, np: s.np, round: false, wtr: false }); if (S.mode === 'widget') { S.wplay = s.play; S.wph = false; } else S.play = s.play;
   try { return fn(); } finally { Object.assign(S, bk); }
 }
 const DIM = { lyric: [390, 844, 2], list: [390, 844, 2], pad: [1024, 768, 1.5], pod: [347, 600, 2], widget: [404, 195, 3] };
