@@ -10,38 +10,77 @@ function vWidget() {
 <div class="wcv" style="${img(S.cover)}"></div>
 <div class="wti"><b>${esc(S.title)}</b><span style="color:${sub}">${esc(S.artist)}</span></div>
 <div class="wdt" style="color:${hexA(t, .4)}">${S.wdots ? '······' : ''}</div>
-<div class="wtl" style="color:${hexA(t, .75)}">${ph ? '–:––' : fmt(S.el)}</div><div class="wbar" style="background:${hexA(t, .35)}"><i style="width:${pct}%;background:${hexA(t, .85)}"></i></div><div class="wtr" style="color:${hexA(t, .75)}">${ph ? '--:--' : '-' + fmt(S.tot - S.el)}</div>
-${ab(I.rew(t, 36), 95, 122)}${S.wplay ? ab(I.pause(t, 26), 178, 120) : ab(I.play(t, 40), 171, 115)}${ab(I.fwd(t, 36), 249, 122)}${ab(air, 331, 123)}</div></div>`;
+<div class="wtl" style="color:${hexA(t, .75)}">${ph ? '–:––' : fmt(S.el)}</div><div class="wbar" data-bar="el" style="background:${hexA(t, .35)}"><i style="width:${pct}%;background:${hexA(t, .85)}"></i></div><div class="wtr" style="color:${hexA(t, .75)}">${ph ? '--:--' : '-' + fmt(S.tot - S.el)}</div>
+${ab(I.rew(t, 36), 95, 122)}<span data-act="play" style="left:0;top:0">${S.wplay ? ab(I.pause(t, 26), 178, 120) : ab(I.play(t, 40), 171, 115)}</span>${ab(I.fwd(t, 36), 249, 122)}${ab(air, 331, 123)}</div></div>`;
 }
 
 /* ===== 내보내기 패널 ===== */
-function expBox() {
-  const d = el('div'), anim = S.mode === 'lyric' || S.mode === 'pad'; d.append(TG('round', '둥근 모서리로 저장 (PNG)'));
-  if (anim) d.append(F('움직임 끝 줄 (현재 줄 → 끝 줄로 가사가 올라가요)', STP('aend', () => S.lyrics.split('\n').length - 1)), F('줄당 시간', RG('lt', 1, 6, .5, v => v + '초')), F('GIF 크기', SEG('gsc', [[.5, '작게'], [.75, '보통'], [1, '크게']])));
-  const r = el('div', 'cvc'), b1 = el('button', 'btn pri', 'PNG 이미지'); b1.onclick = save; r.append(b1);
-  if (anim) { const b2 = el('button', 'btn', 'GIF 움짤'), b3 = el('button', 'btn', '영상'); b2.onclick = () => exportAnim('gif'); b3.onclick = () => exportAnim('video'); r.append(b2, b3); }
-  d.append(r); if (anim) d.append(el('div', 'hint', '움짤·영상은 가사 화면과 아이패드에서 만들 수 있어요.<br>영상은 사파리는 MP4, 크롬은 WebM이에요. 만드는 동안 창을 닫지 마세요.')); return d;
+const dTM = k => TM({ get: () => Math.floor(S[k] / 60), set: n => mut(() => S[k] = n * 60 + S[k] % 60), min: 0, max: 99 }, { get: () => S[k] % 60, set: n => mut(() => S[k] = Math.floor(S[k] / 60) * 60 + n), min: 0, max: 59, pad: 1 });
+function pngBox() {
+  const d = el('div'), r = el('div', 'cvc'), b = el('button', 'btn pri', 'PNG 이미지로 저장'); b.onclick = save; r.append(b);
+  d.append(TG('round', '둥근 모서리로 저장'), r, el('div', 'hint', '저장하면 미리보기 창이 열려요. 아이폰은 이미지를 길게 눌러 사진에 추가하거나 [저장 / 공유]를 누르세요.')); return d;
+}
+function animBox() {
+  const a = el('div'), m = S.mode, ly = m === 'lyric' || m === 'pad', prog = m === 'pad' || m === 'pod' || m === 'widget', tg = m !== 'lyric', sec = v => v + '초';
+  a.append(F('전체 길이', RG('adur', 2, 20, 1, sec)));
+  if (prog) a.append(F('재생바 진행 속도', SEG('arate', [[0, '정지'], [1, '×1'], [5, '×5'], [10, '×10'], [30, '×30']])));
+  if (ly) a.append(F('가사 올라가는 끝 줄 (현재 줄 → 끝 줄)', STP('aend', () => S.lyrics.split('\n').length - 1)), F('줄당 시간', RG('lt', 1, 6, .5, sec)));
+  if (prog) a.append(TG('sk_on', '재생바 넘기기'), F('넘기는 시점', RG('sk_at', 0, 20, .5, sec)), F('넘길 위치 (분 : 초)', dTM('sk_to')));
+  if (tg) a.append(TG('tg_on', '재생 / 일시정지 누르기'), F('누르는 시점', RG('tg_at', 0, 20, .5, sec)));
+  a.append(TG('nx_on', '다음 곡 누르기'), F('누르는 시점', RG('nx_at', 0, 20, .5, sec)));
+  if (m !== 'list') a.append(F('다음 곡 제목', T('nx_title')), F('다음 곡 아티스트', T('nx_artist')), F('다음 곡 길이 (분 : 초)', dTM('nx_tot')));
+  a.append(F('GIF 크기', SEG('gsc', [[.5, '작게'], [.75, '보통'], [1, '크게']])));
+  const g = el('div', 'cvc'), b2 = el('button', 'btn pri', 'GIF 움짤'), b3 = el('button', 'btn pri', '영상'); b2.onclick = () => exportAnim('gif'); b3.onclick = () => exportAnim('video'); g.append(b2, b3); a.append(g);
+  a.append(el('div', 'hint', '켠 이벤트만 적용돼요. 재생바 속도 ×10이면 1초에 10초씩 흘러가요.<br>영상은 사파리는 MP4, 크롬은 WebM이고, 만드는 동안 창을 닫지 마세요.')); return a;
 }
 
-/* ===== 가사 애니메이션 ===== */
+/* ===== 애니메이션 상태 ===== */
 const easeIO = x => x * x * (3 - 2 * x);
 const mp = t => { const e = $('#mp'); if (e) e.textContent = t; };
 const tick = () => new Promise(r => setTimeout(r, 0));
-async function prepAnim(sc) {
-  const pad = S.mode === 'pad', w = pad ? 509 : 330, fs = pad ? S.pfs : S.fs, mb = Math.round(fs * .8), L = S.lyrics.split('\n'), n = L.length, a0 = S.cur, a1 = Math.min(n - 1, S.aend);
-  if (a1 <= a0) throw new Error('range');
-  const sh = L.map(t => blurLine(t || ' ', fs, w, 0, 1)), Y = [0]; sh.forEach((r, i) => Y.push(Y[i] + r.H + mb));
-  const lv = (i, d) => { d = Math.min(d, 8); return d <= 0 ? sh[i] : blurLine(L[i] || ' ', fs, w, Math.min(1.5 + d * 1.1, 6), Math.max(.42 - d * .03, .22)); };
-  mp('가사 준비 중...'); for (let i = 0; i < n; i++) { for (let d = 1; d <= Math.min(8, n); d++) lv(i, d); if (i % 2 === 0) await tick(); }
-  mp('배경 만드는 중...');
-  const h = el('div'); h.style.cssText = 'position:fixed;left:-99999px;top:0'; document.body.append(h); const rr = S.round; S.round = false; renderInto(h, false); S.round = rr;
-  $('.ly', h).style.display = 'none'; await Promise.all([...h.querySelectorAll('img')].map(i => i.decode ? i.decode().catch(() => { }) : 0)); await new Promise(r => setTimeout(r, 100));
-  const base = await html2canvas(h.firstElementChild, { scale: sc, backgroundColor: null, logging: false }); h.remove();
-  const hold = .8, per = S.lt, tr = Math.min(.6, per * .4), total = hold + (a1 - a0) * per + 1, A = pad ? 256 : 205, X = pad ? 495 : 30, clip = pad ? [495, 0, 509, 768] : [30, 140, 330, 704];
-  const posAt = t => { if (t < hold) return a0; const u = t - hold, k = Math.floor(u / per); if (k >= a1 - a0) return a1; const q = u - k * per, s = per - tr; return a0 + k + (q > s ? easeIO((q - s) / tr) : 0); };
+function animState(t) {
+  const m = S.mode, s = { el: S.el, tot: S.tot, play: m === 'widget' ? S.wplay : S.play, title: S.title, artist: S.artist, np: S.np };
+  const ev = []; if (S.sk_on && m !== 'list' && m !== 'lyric') ev.push({ t: S.sk_at, k: 'sk' }); if (S.tg_on && m !== 'lyric') ev.push({ t: S.tg_at, k: 'tg' }); if (S.nx_on) ev.push({ t: S.nx_at, k: 'nx' }); ev.sort((a, b) => a.t - b.t);
+  let c = 0, sk = null; const adv = to => { if (to > c) { if (s.play && S.arate && m !== 'list' && m !== 'lyric') s.el = Math.min(s.tot, s.el + S.arate * (to - c)); c = to; } };
+  for (const e of ev) {
+    if (e.t > t) break; adv(e.t);
+    if (e.k === 'tg') s.play = !s.play;
+    if (e.k === 'sk') { sk = { from: s.el, t: e.t, to: Math.min(s.tot, S.sk_to) }; s.el = sk.to; c = e.t + .5; }
+    if (e.k === 'nx') { if (m === 'list') s.np = Math.min(S.tracks.length, (s.np || 0) + 1); else { s.title = S.nx_title || s.title; s.artist = S.nx_artist || s.artist; s.tot = S.nx_tot; } s.el = 0; sk = null; }
+  }
+  adv(t); if (sk && t >= sk.t && t < sk.t + .5) s.el = sk.from + (sk.to - sk.from) * easeIO((t - sk.t) / .5); return s;
+}
+function withState(s, fn) {
+  const bk = { el: S.el, tot: S.tot, title: S.title, artist: S.artist, np: S.np, play: S.play, wplay: S.wplay, wph: S.wph, round: S.round };
+  Object.assign(S, { el: s.el, tot: s.tot, title: s.title, artist: s.artist, np: s.np, round: false }); if (S.mode === 'widget') { S.wplay = s.play; S.wph = false; } else S.play = s.play;
+  try { return fn(); } finally { Object.assign(S, bk); }
+}
+const DIM = { lyric: [390, 844, 2], list: [390, 844, 2], pad: [1024, 768, 1.5], pod: [347, 600, 2], widget: [404, 195, 3] };
+async function prepAnim(kind) {
+  const m = S.mode, ly = m === 'lyric' || m === 'pad', BF = 10, pad = m === 'pad', w = pad ? 509 : 330, fs = pad ? S.pfs : S.fs, mb = Math.round(fs * .8), L = S.lyrics.split('\n'), n = L.length, a0 = S.cur, a1 = Math.min(n - 1, S.aend), scroll = ly && a1 > a0, hold = .8, per = S.lt;
+  const total = Math.max(S.adur, scroll ? hold + (a1 - a0) * per + 1 : 0), N = Math.floor(total * BF) + 1;
+  const keyOf = s => [Math.round(s.el / Math.max(1, s.tot) * 400), Math.floor(s.el), s.play, s.title, s.artist, s.np].join('|'), map = new Map(), ids = [], sts = [];
+  for (let i = 0; i < N; i++) { const s = animState(i / BF), k = keyOf(s); if (!map.has(k)) { map.set(k, sts.length); sts.push(s); } ids.push(map.get(k)); }
+  const [pw, ph, cap] = DIM[m], sc = kind === 'gif' ? S.gsc : Math.min(cap, Math.max(1, Math.sqrt(150e6 / (sts.length * pw * ph * 4))));
+  let sh, Y, lv; if (ly) {
+    sh = L.map(t => blurLine(t || ' ', fs, w, 0, 1)); Y = [0]; sh.forEach((r, i) => Y.push(Y[i] + r.H + mb));
+    lv = (i, d) => { d = Math.min(d, 8); return d <= 0 ? sh[i] : blurLine(L[i] || ' ', fs, w, Math.min(1.5 + d * 1.1, 6), Math.max(.42 - d * .03, .22)); };
+    mp('가사 준비 중...'); for (let i = 0; i < n; i++) { for (let d = 1; d <= Math.min(8, n); d++) lv(i, d); if (i % 2 === 0) await tick(); }
+  }
+  const h = el('div'); h.style.cssText = 'position:fixed;left:-99999px;top:0'; document.body.append(h); const bases = [];
+  try {
+    for (let i = 0; i < sts.length; i++) {
+      mp(`화면 만드는 중... ${i + 1}/${sts.length}`); withState(sts[i], () => renderInto(h, false, sc)); if (ly) $('.ly', h).style.display = 'none';
+      await Promise.all([...h.querySelectorAll('img')].map(x => x.decode ? x.decode().catch(() => { }) : 0)); if (i === 0) await new Promise(r => setTimeout(r, 100));
+      bases.push(await html2canvas(h.firstElementChild, { scale: sc, backgroundColor: null, logging: false })); await tick();
+    }
+  } finally { h.remove(); }
+  const A = pad ? 256 : 205, X = pad ? 495 : 30, clip = pad ? [495, 0, 509, 768] : [30, 140, 330, 704];
+  const posAt = t => { if (!scroll || t < hold) return a0; const tr = Math.min(.6, per * .4), u = t - hold, k = Math.floor(u / per); if (k >= a1 - a0) return a1; const q = u - k * per, s = per - tr; return a0 + k + (q > s ? easeIO((q - s) / tr) : 0); };
   const draw = (ctx, t) => {
+    t = Math.min(t, total); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.drawImage(bases[ids[Math.min(N - 1, Math.floor(t * BF))]], 0, 0); if (!ly) return;
     const p = posAt(t), k = Math.min(Math.floor(p), n - 1), yp = Y[k] + (p - k) * (Y[k + 1] - Y[k]);
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.drawImage(base, 0, 0); ctx.setTransform(sc, 0, 0, sc, 0, 0); ctx.save(); ctx.beginPath(); ctx.rect(...clip); ctx.clip();
+    ctx.setTransform(sc, 0, 0, sc, 0, 0); ctx.save(); ctx.beginPath(); ctx.rect(...clip); ctx.clip();
     for (let i = 0; i < n; i++) {
       const y = A + Y[i] - yp; if (y > clip[1] + clip[3] + 20 || y + sh[i].H < clip[1] - 20) continue;
       const d = Math.abs(i - p), lo = Math.floor(d), f = d - lo, put = (r, al) => { if (al <= 0) return; ctx.globalAlpha = al; ctx.drawImage(r.c, X - r.pd, y - r.pd, w + 2 * r.pd, r.H + 2 * r.pd); };
@@ -49,7 +88,7 @@ async function prepAnim(sc) {
     }
     ctx.restore(); ctx.globalAlpha = 1;
   };
-  return { W: base.width, H: base.height, total, draw };
+  return { W: bases[0].width, H: bases[0].height, total, draw };
 }
 
 /* ===== GIF 인코더 (직접 구현) ===== */
@@ -86,7 +125,7 @@ function lzw(idx) {
   const res = [mc]; for (let i = 0; i < out.length; i += 255) { const n = Math.min(255, out.length - i); res.push(n); for (let j = 0; j < n; j++) res.push(out[i + j]); } res.push(0); return new Uint8Array(res);
 }
 async function exportGif() {
-  const sc = S.gsc, fps = 12, A = await prepAnim(sc), W = A.W, H = A.H, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d', { willReadFrequently: true });
+  const fps = 12, A = await prepAnim('gif'), W = A.W, H = A.H, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d', { willReadFrequently: true });
   const N = Math.max(2, Math.round(A.total * fps)), samples = [];
   [0, .5, 1].forEach(f => { A.draw(ctx, A.total * f * .98); samples.push(ctx.getImageData(0, 0, W, H)); }); const pal = makePalette(samples), cache = new Int16Array(32768).fill(-1);
   const w16 = (o, n) => o.push(n & 255, (n >> 8) & 255), hd = [71, 73, 70, 56, 57, 97]; w16(hd, W); w16(hd, H); hd.push(0xF7, 0, 0); pal.forEach(c => hd.push(c[0], c[1], c[2])); hd.push(0x21, 0xFF, 11, ...'NETSCAPE2.0'.split('').map(c => c.charCodeAt(0)), 3, 1, 0, 0, 0);
@@ -102,7 +141,7 @@ async function exportGif() {
 async function exportVideo() {
   if (!window.MediaRecorder) throw new Error('이 브라우저는 영상 녹화를 지원하지 않아요');
   const mt = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '';
-  const sc = S.mode === 'pad' ? 1.5 : 2, A = await prepAnim(sc), cv = document.createElement('canvas'); cv.width = A.W & ~1; cv.height = A.H & ~1; const ctx = cv.getContext('2d');
+  const A = await prepAnim('video'), cv = document.createElement('canvas'); cv.width = A.W & ~1; cv.height = A.H & ~1; const ctx = cv.getContext('2d');
   cv.style.cssText = 'max-width:100%;max-height:60vh;border-radius:12px'; $('#modal').append(cv); A.draw(ctx, 0);
   const rec = new MediaRecorder(cv.captureStream(30), mt ? { mimeType: mt, videoBitsPerSecond: 8e6 } : { videoBitsPerSecond: 8e6 }), ch = [];
   rec.ondataavailable = e => e.data && e.data.size && ch.push(e.data);
