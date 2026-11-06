@@ -116,3 +116,10 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:16px;padding:16p
 .stage{touch-action:none}#cv{transform-origin:50% 50%}
 .zreset{position:absolute;top:8px;right:8px;z-index:4;height:36px;padding:0 12px;border:0;border-radius:18px;background:var(--red);color:#fff;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
 @media(max-width:960px){.zreset{right:100px}.stage.full .zreset{top:calc(8px + env(safe-area-inset-top,0px))}body.kb .zreset{display:none}}
+
+/* 결과 창: 영상·이미지가 화면 밖으로 커지지 않게 */
+#modal{overflow-y:auto;justify-content:flex-start;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px))}
+#modal>:first-child{margin-top:auto}#modal>:last-child{margin-bottom:auto}
+#modal img,#modal video{display:block;width:auto;height:auto;max-width:100%;max-height:calc(var(--app-h,100dvh) - 190px);object-fit:contain;border-radius:12px;flex:none;background:#000}
+#modal .bs{flex-wrap:wrap;justify-content:center;flex:none}
+#modal .bs .btn{color:#fff;background:rgba(255,255,255,.18)}#modal .bs .btn.pri{background:var(--red)}
