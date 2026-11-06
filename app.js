@@ -111,6 +111,7 @@ function buildPanel() {
   const plist = () => card('플레이리스트', coverCtl(), F('이름', T('lname')), F('설명 (아티스트 줄)', T('lart')), F('업데이트 문구', T('upd')));
   const tracks = () => card('곡 목록', trackEd());
   const time = () => card('재생 시간', F('현재 위치 (재생바)', RG('el', 0, 0, 1, fmt, () => S.tot)), two(F('현재 (분:초)', durTM('el')), F('총 길이 (분:초)', totTM())), ...(m === 'widget' ? [TG('wph', '시간 대기 표시 (–:––)')] : []));
+  const vol = () => card('볼륨', F('음악 볼륨 (화면의 아래쪽 바를 끌어도 돼요)', RG('vol', 0, 100, 1, v => v + '%')));
   const next = () => card('다음 곡 (다음 버튼을 누르면 바뀌어요)', F('제목', T('nx_title')), F('아티스트', T('nx_artist')), F('길이 (분:초)', dTM('nx_tot')));
   const nextLite = () => card('다음 곡 (자동 녹화 중 넘길 때 바뀌어요)', F('제목', T('nx_title')), F('아티스트', T('nx_artist')));
   const lyr = () => card('가사', LyrEd(), F('가사 넘어가는 속도 (한 줄당)', RG('lineSec', 1, 8, .5, v => v + '초')));
@@ -119,7 +120,7 @@ function buildPanel() {
   const X = {
     lyric: { c: [song, lyr, nextLite], d: [cols, () => card('화면', F('글자 크기', RG('fs', 22, 40, 1, v => v + 'px')), TG('star', '별 버튼'), TG('sbar', '상태바 표시'), clock()), stCard] },
     list: { c: [plist, tracks], d: [() => card('화면', TG('dark', '다크 모드'), F('글자 크기', RG('lfs', 70, 120, 1, v => v + '%')), TG('sbar', '상태바 표시'), clock()), stCard] },
-    pad: { c: [song, lyr, time, next], d: [cols, () => card('화면', F('가사 글자 크기', RG('pfs', 30, 60, 1, v => v + 'px')), TG('star', '별 버튼')), () => card('상단 시간 · 날짜', F('시간', TM({ get: () => S.pclock.h, set: n => mut(() => S.pclock.h = n), min: 1, max: 12 }, { get: () => S.pclock.m, set: n => mut(() => S.pclock.m = n), min: 0, max: 59, pad: 1 })), F('오전 / 오후', SEG('ap', [['AM', '오전'], ['PM', '오후']])), F('날짜 형식', SEG('dfmt', [['en', 'Thu Sep 26'], ['ko', '9월 26일 (목)']])), F('날짜 선택', CAL('date'))), () => stCard(true)] },
+    pad: { c: [song, lyr, time, vol, next], d: [cols, () => card('화면', F('가사 글자 크기', RG('pfs', 30, 60, 1, v => v + 'px')), TG('star', '별 버튼')), () => card('상단 시간 · 날짜', F('시간', TM({ get: () => S.pclock.h, set: n => mut(() => S.pclock.h = n), min: 1, max: 12 }, { get: () => S.pclock.m, set: n => mut(() => S.pclock.m = n), min: 0, max: 59, pad: 1 })), F('오전 / 오후', SEG('ap', [['AM', '오전'], ['PM', '오후']])), F('날짜 형식', SEG('dfmt', [['en', 'Thu Sep 26'], ['ko', '9월 26일 (목)']])), F('날짜 선택', CAL('date'))), () => stCard(true)] },
     pod: { c: [song, time, next], d: [() => card('아이팟', F('본체 프리셋', SEG('podpre', [['silver', '실버'], ['black', '블랙'], ['white', '화이트']], v => { const q = { silver: ['#cfcfcf', '#ffffff'], black: ['#262626', '#333333'], white: ['#f2f2f2', '#ffffff'] }[v]; S.podb = q[0]; S.podw = q[1]; })), two(F('본체 색', COL('podb')), F('휠 색', COL('podw'))), F('상단 문구', T('bar')), TG('pshuf', '셔플 아이콘')), () => stCard(false, true)] },
     widget: { c: [song, time, next], d: [() => card('잠금화면 플레이어', two(F('카드 색', COL('wc')), F('글자 색', COL('wt'))), TG('wdots', '우측 상단 점선'), TG('wtr', '바깥 배경 투명 (PNG)'), F('바깥 배경 색 (투명을 끄면 적용)', COL('wbg')))] }
   };
