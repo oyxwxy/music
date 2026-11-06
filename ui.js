@@ -53,7 +53,25 @@ function CAL(k) {
 
 /* ----- 가사 편집기 ----- */
 const splitLy = s => String(s).replace(/\r/g, '').split(/\n|\s\/\s/).map(x => x.trim()).filter(x => x && !/^\[[^\]]*\]$/.test(x));
+let lyMode = 'text';
+function LyrText() {
+  const w = el('div', 'lytx'), ta = el('textarea'), val = () => S.lyr.join('\n');
+  ta.value = val(); ta.placeholder = '한 줄에 가사 한 줄씩 적어요.\n줄바꿈하면 다음 가사 줄이 돼요.'; ta.spellcheck = false; ta.rows = 6;
+  const grow = () => { ta.style.height = 'auto'; ta.style.height = Math.max(150, ta.scrollHeight + 2) + 'px'; };
+  const upCur = () => { const ls = ta.value.split('\n'), li = ta.value.slice(0, ta.selectionStart).split('\n').length - 1; let n = 0; for (let i = 0; i <= li && i < ls.length; i++) if (ls[i].trim()) n++; const c = Math.max(0, Math.min(S.lyr.length - 1, n - 1)); if (c !== S.cur) { S.cur = c; S.lsec = 0; render(); upd(); } };
+  ta.oninput = () => { const ls = ta.value.split('\n').map(x => x.trim()).filter(Boolean); S.lyr = ls.length ? ls : ['']; S.cur = Math.min(S.cur, S.lyr.length - 1); grow(); upCur(); render(); upd(); };
+  ta.onpaste = e => { const s = (e.clipboardData && e.clipboardData.getData('text')) || ''; if (/\s\/\s|^\s*\[[^\]]*\]\s*$/m.test(s)) setTimeout(() => { ta.value = splitLy(ta.value).join('\n'); ta.oninput(); }, 0); };
+  ['keyup', 'click', 'focus'].forEach(ev => ta.addEventListener(ev, upCur));
+  w.append(ta, el('div', 'hint', '커서가 있는 줄이 미리보기의 현재 줄이 돼요. 통째로 붙여넣으면 줄이 자동으로 나뉘어요.'));
+  ups.push(() => { if (document.activeElement !== ta && ta.value !== val()) ta.value = val(); grow(); }); setTimeout(grow, 0); return w;
+}
 function LyrEd() {
+  const box = el('div', 'lyw'), sg = el('div', 'seg'), body = el('div');
+  const show = () => { [...sg.children].forEach(b => b.classList.toggle('on', b._v === lyMode)); body.innerHTML = ''; body.append(lyMode === 'text' ? LyrText() : LyrRows()); upd(); };
+  [['text', '한 번에 쓰기'], ['rows', '줄별 편집']].forEach(([v, l]) => { const b = el('button', '', l); b._v = v; b.onclick = () => { lyMode = v; show(); }; sg.append(b); });
+  box.append(sg, body); show(); return box;
+}
+function LyrRows() {
   const box = el('div', 'lyed'); let rows;
   const build = () => {
     box.innerHTML = ''; S.lyr.forEach((t, i) => {

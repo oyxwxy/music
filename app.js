@@ -6,7 +6,7 @@ function fit() {
   const st = $('.stage'), [w, h] = DIM[S.mode], mob = isMob(), cs = getComputedStyle(st);
   const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight), padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
   const avail = st.clientWidth - (mob ? padX : 24);
-  const ctl = mob && S.mode !== 'list' ? 52 : 0;
+  const ctl = mob && S.mode !== 'list' && !document.body.classList.contains('kb') ? 52 : 0;
   const maxH = mob ? st.clientHeight - padY - ctl : innerHeight - 130;
   const k = Math.max(.1, Math.min(avail / w, maxH / h, 1.6));
   cv.style.width = w * k + 'px'; cv.style.height = h * k + 'px'; cv._s = Math.min(3, Math.max(1.5, k * (devicePixelRatio || 1))); needs = true;
@@ -14,10 +14,12 @@ function fit() {
 /* 키보드/주소창에 맞춰 앱 높이 보정 (iOS) */
 (function () {
   const vv = window.visualViewport; if (!vv) return;
+  let maxVH = 0, lastW = innerWidth;
   const sync = () => {
+    if (innerWidth !== lastW) { lastW = innerWidth; maxVH = 0; } maxVH = Math.max(maxVH, vv.height);
     document.documentElement.style.setProperty('--app-h', vv.height + 'px');
     document.body.style.top = (isMob() ? vv.offsetTop : 0) + 'px';
-    document.body.classList.toggle('kb', isMob() && vv.height < screen.height * .72 && innerHeight - vv.height > 120);
+    document.body.classList.toggle('kb', isMob() && vv.height < maxVH * .8);
     fit();
   };
   vv.addEventListener('resize', sync); vv.addEventListener('scroll', sync); sync();
@@ -246,5 +248,7 @@ const MODES = [['lyric', '가사'], ['list', '재생목록'], ['pad', '아이패
 MODES.forEach(([k, l]) => { const b = el('button', k === S.mode ? 'on' : '', l); b.onclick = () => { S.mode = k; [...mb.children].forEach((c, i) => c.classList.toggle('on', MODES[i][0] === k)); buildPanel(); fit(); b.scrollIntoView({ inline: 'center', block: 'nearest' }); $('#panel').scrollTop = 0; }; mb.append(b); });
 $('#saveBtn').onclick = savePNG; $('#fab').onclick = () => act('play'); $('#rec').onclick = recToggle; addEventListener('resize', fit);
 buildPanel(); fit(); requestAnimationFrame(frame);
+$('#kbdone').onclick = () => document.activeElement && document.activeElement.blur();
+document.addEventListener('focusin', e => { const t = e.target; if (isMob() && t.closest && t.closest('#panel') && /^(INPUT|TEXTAREA)$/.test(t.tagName)) setTimeout(() => t.scrollIntoView({ block: t.tagName === 'TEXTAREA' ? 'nearest' : 'center', behavior: 'smooth' }), 350); });
 $('#zoom').onclick = () => { const f = $('.stage').classList.toggle('full'); $('#zoom').textContent = f ? '✕ 닫기' : '⤢ 크게'; fit(); };
 loadSaved();
