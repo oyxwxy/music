@@ -9,7 +9,7 @@ function fit() {
   const ctl = mob && S.mode !== 'list' && !document.body.classList.contains('kb') ? 52 : 0;
   const maxH = mob ? st.clientHeight - padY - ctl : innerHeight - 130;
   const k = Math.max(.1, Math.min(avail / w, maxH / h, 1.6));
-  cv.style.width = w * k + 'px'; cv.style.height = h * k + 'px'; const zz = REC.on ? 1 : Z.z; cv._s = Math.min(zz > 1 ? 3.5 : 3, Math.max(1.5, k * zz * (devicePixelRatio || 1))); needs = true;
+  cv.style.width = w * k + 'px'; cv.style.height = h * k + 'px'; const zz = REC.on ? 1 : Z.z; cv._s = REC.on && REC.s ? REC.s : Math.min(zz > 1 ? 3.5 : 3, Math.max(1.5, k * zz * (devicePixelRatio || 1))); needs = true;
 }
 /* ----- 미리보기 확대/축소 (두 손가락, 더블탭, Ctrl+휠) ----- */
 const Z = { z: 1, x: 0, y: 0 }, zp = new Map(); let zg = null, zT = 0, zTap = null, zFit = 0;
@@ -98,7 +98,7 @@ function syncUI() {
   const fab = $('#fab'), rec = $('#rec'); fab.hidden = S.mode !== 'lyric'; fab.textContent = S.play ? '❚❚' : '▶'; rec.hidden = S.mode === 'list';
   const sec = Math.floor((performance.now() - REC.t0) / 1000); rec.textContent = REC.on ? (REC.dur ? `■ 정지  ${Math.min(sec, Math.round(REC.dur))}/${Math.round(REC.dur)}초` : `■ 정지  ${sec}초`) : '● 녹화'; rec.classList.toggle('on', REC.on);
 }
-function frame(now) { const dt = Math.min(.1, (now - last) / 1000); last = now; tick(dt); if (needs || REC.on || R.press) { needs = false; draw(); syncUI(); } requestAnimationFrame(frame); }
+function frame(now) { const dt = Math.min(.1, (now - last) / 1000); last = now; tick(dt); if (needs || REC.on || R.press) { needs = false; draw(); syncUI(); if (REC.on && REC.kind === 'gif' && REC.gx && now >= REC.nt) gifCap(now); } requestAnimationFrame(frame); }
 
 /* ----- 편집 패널 ----- */
 const PG = {};
@@ -128,12 +128,12 @@ function buildPanel() {
     p.append(card('이미지로 저장', ...(m === 'pod' || m === 'widget' ? [] : [TG('round', '모서리 둥글게 (모서리가 투명해요)')]), b('PNG로 저장', savePNG)));
     if (m !== 'list') {
       const lm = m === 'lyric' || m === 'pad';
-      p.append(card('GIF · 영상 바로 저장', el('div', 'hint big', '버튼만 누르면 알아서 재생하면서 녹화하고, 끝나면 바로 결과를 보여줘요. (GIF는 최대 20초까지 담겨요)'),
+      p.append(card('GIF · 영상 바로 저장', el('div', 'hint big', '버튼만 누르면 알아서 재생하면서 녹화하고, 끝나면 바로 결과를 보여줘요. '),
         ...(lm ? [tgb('rfull', '가사 끝까지 자동으로')] : []),
         ...(!lm || !S.rfull ? [F('녹화 길이', RG('rsec', 3, 30, 1, v => v + '초'))] : []),
         tgb('rnext', '녹화 중 다음 곡으로 넘기기'),
         ...(S.rnext ? [F('다음 곡으로 넘기는 시점', RG('rnextAt', 1, 29, 1, v => v + '초 뒤', () => Math.max(1, Math.floor(autoDur()) - 1)))] : []),
-        F('GIF 크기 (클수록 용량이 커요)', SEG('gsc', [[.5, '작게'], [.75, '보통'], [1, '크게']])),
+        F('GIF 크기 (클수록 용량이 커요)', SEG('gsc', [[.5, '작게'], [.75, '보통'], [1, '크게']], buildPanel)), F('GIF 부드러움 (높을수록 용량이 커요)', SEG('gfps', [[10, '가볍게'], [15, '보통'], [20, '부드럽게']], buildPanel)), el('div', 'hint', `지금 설정으로 GIF는 최대 약 ${Math.floor(gifSec())}초까지 담겨요. 더 길게 담으려면 크기를 줄이거나 영상으로 저장하세요.`),
         two(b('GIF로 저장', () => autoRec('gif')), b('영상으로 저장', () => autoRec('video'), 'btn big'))));
       p.append(card('직접 조작해서 녹화', el('div', 'hint big', '1. 형식을 고르고 [녹화 시작]을 눌러요.<br>2. 위 화면을 직접 눌러 보세요. ▶ 재생, 재생바 끌기, 다음 곡 누르기 … 누르는 그대로 담겨요.<br>3. 끝나면 [■ 정지]를 눌러요.'), F('형식', SEG('fmt', [['video', '영상'], ['gif', 'GIF 움짤']])), b('● 녹화 시작', () => { S.rmode = 'manual'; recToggle(); })));
     }
@@ -157,15 +157,23 @@ function savePNG() {
   const c = oc.getContext('2d'), hs = R.hits; c.scale(s, s); R.hits = []; paint(c, false); R.hits = hs; oc.toBlob(b => b ? showResult(b) : alert('저장하지 못했어요'), 'image/png');
 }
 const KEEP = ['el', 'tot', 'title', 'artist', 'nx_title', 'nx_artist', 'nx_tot', 'np', 'cur', 'lsec', 'play', 'wplay', 'wph', 'shuf', 'rep', 'fav', 'vol'];
+const gifDims = () => { const [w, h] = DIM[S.mode]; return [Math.round(w * S.gsc), Math.round(h * S.gsc)]; };
+const gifMax = () => { const [W, H] = gifDims(); return Math.max(60, Math.min(S.gfps * 20, Math.floor(150e6 / (W * H * 4)))); };
+const gifSec = () => gifMax() / S.gfps;
+function gifCap(now) {
+  REC.gx.drawImage(cv, 0, 0, REC.gc.width, REC.gc.height); REC.fr.push({ d: REC.gx.getImageData(0, 0, REC.gc.width, REC.gc.height), t: now });
+  REC.nt = now - REC.nt > REC.gint ? now + REC.gint : REC.nt + REC.gint; if (REC.fr.length >= REC.max) recStop();
+}
 function recToggle() { REC.on ? recStop() : recStart(); }
 function autoDur() {
-  const cap = S.fmt === 'gif' ? 20 : 90; let d = S.rsec;
+  const cap = S.fmt === 'gif' ? Math.floor(gifSec()) : 90; let d = S.rsec;
   if (S.rfull && (S.mode === 'lyric' || S.mode === 'pad') && S.lyr.length) d = (S.lyr.length - 1 - S.cur) * S.lineSec + (S.lineSec - Math.min(S.lsec, S.lineSec)) + 1;
   return Math.max(3, Math.min(cap, d));
 }
 function autoRec(fm) { if (REC.on) { recStop(); return; } S.fmt = fm; S.rmode = 'auto'; recStart(); }
 function recStart() {
   if (S.fmt === 'video' && !window.MediaRecorder) { alert('이 브라우저는 영상 녹화를 지원하지 않아요. GIF를 골라 주세요.'); return; }
+  REC.kind = S.fmt; REC.s = S.fmt === 'video' ? 2 : Math.max(1.5, S.gsc * 2); cv._s = REC.s; draw();
   REC.snap = {}; KEEP.forEach(k => REC.snap[k] = S[k]); REC.on = true; REC.t0 = performance.now(); needs = true;
   REC.dur = 0;
   if (S.rmode === 'auto') {
@@ -178,21 +186,21 @@ function recStart() {
     const mt = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(t => MediaRecorder.isTypeSupported(t)) || ''; REC.ch = [];
     REC.mr = new MediaRecorder(cv.captureStream(30), mt ? { mimeType: mt, videoBitsPerSecond: 8e6 } : { videoBitsPerSecond: 8e6 }); REC.mr.ondataavailable = e => e.data && e.data.size && REC.ch.push(e.data); REC.mr.start(200);
   } else {
-    const [w, h] = DIM[S.mode]; REC.fr = []; REC.gc = document.createElement('canvas'); REC.gc.width = Math.round(w * S.gsc); REC.gc.height = Math.round(h * S.gsc); REC.gx = REC.gc.getContext('2d', { willReadFrequently: true });
-    REC.iv = setInterval(() => { REC.gx.drawImage(cv, 0, 0, REC.gc.width, REC.gc.height); REC.fr.push({ d: REC.gx.getImageData(0, 0, REC.gc.width, REC.gc.height), t: performance.now() }); if (REC.fr.length >= 200) recStop(); }, 100);
+    const [gw, gh] = gifDims(); REC.fr = []; REC.gc = document.createElement('canvas'); REC.gc.width = gw; REC.gc.height = gh; REC.gx = REC.gc.getContext('2d', { willReadFrequently: true }); REC.gx.imageSmoothingQuality = 'high';
+    REC.gint = 1000 / S.gfps; REC.nt = performance.now(); REC.max = gifMax();
   }
 }
 async function recStop() {
-  if (!REC.on) return; const fmt = S.fmt; clearInterval(REC.iv); clearTimeout(REC.to); clearTimeout(REC.tn);
+  if (!REC.on) return; const fmt = REC.kind || S.fmt; clearTimeout(REC.to); clearTimeout(REC.tn);
   if (fmt === 'video') await new Promise(r => { REC.mr.onstop = r; REC.mr.stop(); });
-  REC.on = false; KEEP.forEach(k => S[k] = REC.snap[k]); needs = true; upd(); syncUI();
+  REC.on = false; REC.gx = null; fit(); KEEP.forEach(k => S[k] = REC.snap[k]); needs = true; upd(); syncUI();
   if (fmt === 'video') { const type = (REC.mr.mimeType || 'video/webm').split(';')[0]; showResult(new Blob(REC.ch, { type }), type, type.includes('mp4') ? 'mp4' : 'webm'); } else await encodeGif();
 }
 
 /* ===== GIF 인코더 (직접 구현) ===== */
 function makePalette(samples) {
   const hist = new Map(); samples.forEach(d => { const p = d.data; for (let i = 0; i < p.length; i += 16) { const k = (p[i] >> 3 << 10) | (p[i + 1] >> 3 << 5) | (p[i + 2] >> 3); hist.set(k, (hist.get(k) || 0) + 1); } });
-  const boxes = [[...hist].map(([k, c]) => ({ r: k >> 10, g: (k >> 5) & 31, b: k & 31, c }))];
+  const boxes = [[...hist].map(([k, c]) => ({ r: k >> 10, g: (k >> 5) & 31, b: k & 31, c: Math.sqrt(c) }))];
   while (boxes.length < 256) {
     let bi = -1, bs = 0; boxes.forEach((b, i) => { if (b.length < 2) return; const s = b.reduce((a, x) => a + x.c, 0); if (s > bs) { bs = s; bi = i; } }); if (bi < 0) break;
     const b = boxes[bi], rg = ch => { let mn = 31, mx = 0; b.forEach(x => { mn = Math.min(mn, x[ch]); mx = Math.max(mx, x[ch]); }); return mx - mn; };
@@ -226,12 +234,20 @@ function lzw(idx) {
 async function encodeGif() {
   const fr = REC.fr, n = fr.length; if (n < 2) { alert('너무 짧아요. 조금 더 길게 녹화해 주세요.'); return; }
   const m = $('#modal'); m.hidden = false; m.onclick = null; m.innerHTML = '<p id="mp">GIF 만드는 중...</p>'; await new Promise(r => setTimeout(r, 30));
-  const W = fr[0].d.width, H = fr[0].d.height, pal = makePalette([fr[0].d, fr[n >> 1].d, fr[n - 1].d]), cache = new Int16Array(32768).fill(-1), w16 = (o, v) => o.push(v & 255, (v >> 8) & 255), hd = [71, 73, 70, 56, 57, 97];
-  w16(hd, W); w16(hd, H); hd.push(0xF7, 0, 0); pal.forEach(c => hd.push(c[0], c[1], c[2])); hd.push(0x21, 0xFF, 11, ...'NETSCAPE2.0'.split('').map(c => c.charCodeAt(0)), 3, 1, 0, 0, 0); const parts = [new Uint8Array(hd)];
+  const W = fr[0].d.width, H = fr[0].d.height, ns = Math.min(10, n), pal = makePalette(Array.from({ length: ns }, (_, i) => fr[Math.round(i * (n - 1) / (ns - 1))].d)), cache = new Int16Array(32768).fill(-1), w16 = (o, v) => o.push(v & 255, (v >> 8) & 255), hd = [71, 73, 70, 56, 57, 97];
+  w16(hd, W); w16(hd, H); hd.push(0xF7, 0, 0); pal.forEach(c => hd.push(c[0], c[1], c[2])); hd.push(0x21, 0xFF, 11, ...'NETSCAPE2.0'.split('').map(c => c.charCodeAt(0)), 3, 1, 0, 0, 0);
+  const ents = []; let prev = null;
   for (let i = 0; i < n; i++) {
-    const dl = Math.max(2, Math.round((i < n - 1 ? fr[i + 1].t - fr[i].t : 100) / 10)), g = [0x21, 0xF9, 4, 4]; w16(g, dl); g.push(0, 0, 0x2C); w16(g, 0); w16(g, 0); w16(g, W); w16(g, H); g.push(0); parts.push(new Uint8Array(g), lzw(quant(fr[i].d, pal, W, H, cache)));
+    const q = quant(fr[i].d, pal, W, H, cache); let x0 = 0, y0 = 0, x1 = W - 1, y1 = H - 1;
+    if (prev) { x0 = W; y0 = H; x1 = -1; y1 = -1; for (let y = 0, k = 0; y < H; y++) for (let x = 0; x < W; x++, k++) if (q[k] !== prev[k]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; y1 = y; } if (x1 < 0) { fr[i].d = null; continue; } }
+    const w = x1 - x0 + 1, h = y1 - y0 + 1, sub = new Uint8Array(w * h); for (let y = y0; y <= y1; y++) sub.set(q.subarray(y * W + x0, y * W + x1 + 1), (y - y0) * w);
+    ents.push({ t: fr[i].t, x: x0, y: y0, w, h, lz: lzw(sub) }); prev = q; fr[i].d = null;
     if (i % 2 === 0) { const e = $('#mp'); if (e) e.textContent = `GIF 만드는 중... ${Math.round(i / n * 100)}%`; await new Promise(r => setTimeout(r)); }
   }
+  const parts = [new Uint8Array(hd)], T0 = ents[0].t, tEnd = fr[n - 1].t + (fr[n - 1].t - fr[n - 2].t);
+  ents.forEach((e, j) => {
+    const nt = j < ents.length - 1 ? ents[j + 1].t : tEnd, dl = Math.max(2, Math.round((nt - T0) / 10) - Math.round((e.t - T0) / 10)), g = [0x21, 0xF9, 4, 4]; w16(g, dl); g.push(0, 0, 0x2C); w16(g, e.x); w16(g, e.y); w16(g, e.w); w16(g, e.h); g.push(0); parts.push(new Uint8Array(g), e.lz);
+  });
   parts.push(new Uint8Array([0x3B])); showResult(new Blob(parts, { type: 'image/gif' }), 'image/gif', 'gif');
 }
 
