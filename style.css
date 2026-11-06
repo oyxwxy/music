@@ -71,7 +71,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:16px;padding:16p
   .top nav{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);scroll-behavior:smooth}
   .seg button{padding:9px 13px}
   main{flex:1;min-height:0;display:flex;flex-direction:column;gap:0;padding:0;max-width:none;margin:0}
-  .stage{position:relative;top:auto;align-self:stretch;flex:none;height:calc(var(--app-h,100dvh)*.40);margin:8px 8px 0;padding:8px;flex-direction:column;gap:8px;border-radius:16px}
+  .stage{position:relative;top:auto;align-self:stretch;flex:none;height:calc(var(--app-h,100dvh)*.48);margin:8px 8px 0;padding:8px;flex-direction:column;gap:8px;border-radius:16px}
   body.kb .stage{height:calc(var(--app-h,100dvh)*.30)}
   .sctl{display:flex;align-items:center;justify-content:space-between;width:100%;flex:none;min-height:44px}
   .sctl:not(:has(>:not([hidden]))){display:none}
@@ -94,3 +94,11 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:16px;padding:16p
 
 .bulk{margin-top:10px;background:var(--fill);border-radius:12px;padding:0 12px}.bulk summary{min-height:44px;display:flex;align-items:center;font-weight:600;font-size:15px;cursor:pointer;list-style:none}.bulk summary::-webkit-details-marker{display:none}.bulk[open]{padding-bottom:12px}
 .bulk textarea{width:100%;border:0;border-radius:10px;background:var(--card);padding:10px 12px;font-size:16px;line-height:1.5;resize:vertical;outline:0}.bulk textarea:focus{box-shadow:0 0 0 2px var(--red)}.bulk .btn.big{margin-top:8px}
+
+.zoom{display:none}.btn.danger{color:#ff3b30}
+@media(max-width:960px){
+  .zoom{display:block;position:absolute;top:8px;right:8px;z-index:4;height:36px;padding:0 12px;border:0;border-radius:18px;background:rgba(0,0,0,.55);color:#fff;font-size:13px;font-weight:700}
+  .stage.full{position:absolute;inset:0;z-index:40;margin:0;height:auto;border-radius:0;padding:calc(52px + env(safe-area-inset-top,0px)) 8px calc(8px + env(safe-area-inset-bottom,0px));background-color:var(--bg)}
+  body.kb .stage.full{height:auto}
+  .stage.full .zoom{top:calc(8px + env(safe-area-inset-top,0px))}
+}

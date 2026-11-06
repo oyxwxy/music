@@ -3,10 +3,11 @@
 const cv = $('#cv'), cx = cv.getContext('2d'), REC = { on: false }; let last = performance.now(), syncT = 0;
 const isMob = () => innerWidth <= 960;
 function fit() {
-  const st = $('.stage'), [w, h] = DIM[S.mode], mob = isMob();
-  const avail = st.clientWidth - (mob ? 16 : 24);
+  const st = $('.stage'), [w, h] = DIM[S.mode], mob = isMob(), cs = getComputedStyle(st);
+  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight), padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  const avail = st.clientWidth - (mob ? padX : 24);
   const ctl = mob && S.mode !== 'list' ? 52 : 0;
-  const maxH = mob ? st.clientHeight - 16 - ctl : innerHeight - 130;
+  const maxH = mob ? st.clientHeight - padY - ctl : innerHeight - 130;
   const k = Math.max(.1, Math.min(avail / w, maxH / h, 1.6));
   cv.style.width = w * k + 'px'; cv.style.height = h * k + 'px'; cv._s = Math.min(3, Math.max(1.5, k * (devicePixelRatio || 1))); needs = true;
 }
@@ -61,14 +62,14 @@ function tick(dt) {
 }
 function syncUI() {
   const fab = $('#fab'), rec = $('#rec'); fab.hidden = S.mode !== 'lyric'; fab.textContent = S.play ? '❚❚' : '▶'; rec.hidden = S.mode === 'list';
-  rec.textContent = REC.on ? `■ 정지  ${Math.floor((performance.now() - REC.t0) / 1000)}초` : '● 녹화'; rec.classList.toggle('on', REC.on);
+  const sec = Math.floor((performance.now() - REC.t0) / 1000); rec.textContent = REC.on ? (REC.dur ? `■ 정지  ${Math.min(sec, Math.round(REC.dur))}/${Math.round(REC.dur)}초` : `■ 정지  ${sec}초`) : '● 녹화'; rec.classList.toggle('on', REC.on);
 }
 function frame(now) { const dt = Math.min(.1, (now - last) / 1000); last = now; tick(dt); if (needs || REC.on || R.press) { needs = false; draw(); syncUI(); } requestAnimationFrame(frame); }
 
 /* ----- 편집 패널 ----- */
 const PG = {};
 const stCard = (ipad, pod) => card('상태 표시줄', ...(pod ? [] : [F('네트워크', SEG('net', [['wifi', '와이파이'], ['5g', '5G'], ['lte', 'LTE'], ['none', '없음']]))]), ...(ipad || pod ? [] : [F('신호 세기', RG('sig', 0, 4, 1, v => v + '칸'))]), F('배터리 (20% 이하는 빨간색)', RG('batt', 1, 100, 1, v => v + '%')), TG('chg', '충전 중 (초록 + 번개)'), ...(pod ? [] : [TG('lowp', '저전력 모드 (노란색)')]));
-function nextTg() { const t = TG('rnext', '녹화 중 다음 곡으로 넘기기'); t.firstChild.addEventListener('change', () => buildPanel()); return t; }
+function tgb(k, tx) { const t = TG(k, tx); t.firstChild.addEventListener('change', () => buildPanel()); return t; }
 function buildPanel() {
   ups = []; const p = $('#panel'), m = S.mode, pg = PG[m] || 'c'; p.innerHTML = '';
   const tabs = el('div', 'seg ptabs'); [['c', '내용'], ['d', '디자인'], ['x', '내보내기']].forEach(([k, l]) => { const b = el('button', k === pg ? 'on' : '', l); b.onclick = () => { PG[m] = k; buildPanel(); }; tabs.append(b); }); p.append(tabs);
@@ -91,7 +92,19 @@ function buildPanel() {
   if (pg === 'x') {
     const b = (t, f, c = 'btn pri big') => { const x = el('button', c, t); x.onclick = f; return x; };
     p.append(card('이미지로 저장', ...(m === 'pod' || m === 'widget' ? [] : [TG('round', '모서리 둥글게 (모서리가 투명해요)')]), b('PNG로 저장', savePNG)));
-    if (m !== 'list') p.append(card('움짤 · 영상 만들기', el('div', 'hint big', '1. 형식을 고르고 [녹화 시작]을 눌러요.<br>2. 왼쪽 화면을 직접 눌러 보세요. ▶ 재생, 재생바 끌기, 다음 곡 누르기 … 누르는 그대로 담겨요.<br>3. 끝나면 [■ 정지]를 누르면 완성돼요. (재생 속도는 실제 속도 그대로예요)'), F('녹화 방식', SEG('rmode', [['manual', '직접 조작'], ['auto', '자동 재생']], buildPanel)), ...(S.rmode === 'auto' ? [el('div', 'hint', '지금 화면 상태 그대로 재생을 켜고, 정한 시간이 지나면 알아서 멈춰요. 가사는 지금 줄부터 넘어가요.'), F('녹화 길이', RG('rsec', 3, 30, 1, v => v + '초')), nextTg(), ...(S.rnext ? [F('다음 곡으로 넘기는 시점', RG('rnextAt', 1, 29, 1, v => v + '초 뒤', () => Math.max(1, S.rsec - 1)))] : [])] : []), F('형식', SEG('fmt', [['video', '영상'], ['gif', 'GIF 움짤']])), F('GIF 크기 (클수록 용량이 커요)', SEG('gsc', [[.5, '작게'], [.75, '보통'], [1, '크게']])), b(S.rmode === 'auto' ? '● 자동 녹화 시작' : '● 녹화 시작', recToggle)));
+    if (m !== 'list') {
+      const lm = m === 'lyric' || m === 'pad';
+      p.append(card('GIF · 영상 바로 저장', el('div', 'hint big', '버튼만 누르면 알아서 재생하면서 녹화하고, 끝나면 바로 결과를 보여줘요. (GIF는 최대 20초까지 담겨요)'),
+        ...(lm ? [tgb('rfull', '가사 끝까지 자동으로')] : []),
+        ...(!lm || !S.rfull ? [F('녹화 길이', RG('rsec', 3, 30, 1, v => v + '초'))] : []),
+        tgb('rnext', '녹화 중 다음 곡으로 넘기기'),
+        ...(S.rnext ? [F('다음 곡으로 넘기는 시점', RG('rnextAt', 1, 29, 1, v => v + '초 뒤', () => Math.max(1, Math.floor(autoDur()) - 1)))] : []),
+        F('GIF 크기 (클수록 용량이 커요)', SEG('gsc', [[.5, '작게'], [.75, '보통'], [1, '크게']])),
+        two(b('GIF로 저장', () => autoRec('gif')), b('영상으로 저장', () => autoRec('video'), 'btn big'))));
+      p.append(card('직접 조작해서 녹화', el('div', 'hint big', '1. 형식을 고르고 [녹화 시작]을 눌러요.<br>2. 위 화면을 직접 눌러 보세요. ▶ 재생, 재생바 끌기, 다음 곡 누르기 … 누르는 그대로 담겨요.<br>3. 끝나면 [■ 정지]를 눌러요.'), F('형식', SEG('fmt', [['video', '영상'], ['gif', 'GIF 움짤']])), b('● 녹화 시작', () => { S.rmode = 'manual'; recToggle(); })));
+    }
+    p.append(card('자동 저장 · 백업', el('div', 'hint big', '편집 내용은 이 기기의 브라우저에 자동으로 저장돼요. 브라우저 데이터를 지우거나 오래 접속하지 않으면 사라질 수 있으니, 중요한 건 백업 파일로 따로 저장해 두세요.'), el('div', 'hint', '', ), two(b('백업 파일 저장', backupFile, 'btn big'), b('백업 불러오기', restoreFile, 'btn big')), b('처음 상태로 초기화', resetAll, 'btn big danger')));
+    setNote();
   } else X[m][pg].forEach(f => p.append(f()));
   upd();
 }
@@ -111,10 +124,22 @@ function savePNG() {
 }
 const KEEP = ['el', 'tot', 'title', 'artist', 'nx_title', 'nx_artist', 'nx_tot', 'np', 'cur', 'lsec', 'play', 'wplay', 'wph', 'shuf', 'rep', 'fav', 'vol'];
 function recToggle() { REC.on ? recStop() : recStart(); }
+function autoDur() {
+  const cap = S.fmt === 'gif' ? 20 : 90; let d = S.rsec;
+  if (S.rfull && (S.mode === 'lyric' || S.mode === 'pad') && S.lyr.length) d = (S.lyr.length - 1 - S.cur) * S.lineSec + (S.lineSec - Math.min(S.lsec, S.lineSec)) + 1;
+  return Math.max(3, Math.min(cap, d));
+}
+function autoRec(fm) { if (REC.on) { recStop(); return; } S.fmt = fm; S.rmode = 'auto'; recStart(); }
 function recStart() {
   if (S.fmt === 'video' && !window.MediaRecorder) { alert('이 브라우저는 영상 녹화를 지원하지 않아요. GIF를 골라 주세요.'); return; }
   REC.snap = {}; KEEP.forEach(k => REC.snap[k] = S[k]); REC.on = true; REC.t0 = performance.now(); needs = true;
-  if (S.rmode === 'auto') { if (S.mode === 'widget') { S.wplay = true; S.wph = false; } else S.play = true; REC.to = setTimeout(recStop, S.rsec * 1000); if (S.rnext) REC.tn = setTimeout(() => { if (REC.on) { swapTrack(); needs = true; render(); upd(); } }, Math.min(S.rnextAt, Math.max(1, S.rsec - 1)) * 1000); render(); upd(); }
+  REC.dur = 0;
+  if (S.rmode === 'auto') {
+    const dur = REC.dur = autoDur(); if (S.mode === 'widget') { S.wplay = true; S.wph = false; } else S.play = true;
+    REC.to = setTimeout(recStop, dur * 1000);
+    if (S.rnext) REC.tn = setTimeout(() => { if (REC.on) { swapTrack(); needs = true; render(); upd(); } }, Math.min(S.rnextAt, Math.max(1, dur - 1)) * 1000);
+    render(); upd();
+  }
   if (S.fmt === 'video') {
     const mt = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(t => MediaRecorder.isTypeSupported(t)) || ''; REC.ch = [];
     REC.mr = new MediaRecorder(cv.captureStream(30), mt ? { mimeType: mt, videoBitsPerSecond: 8e6 } : { videoBitsPerSecond: 8e6 }); REC.mr.ondataavailable = e => e.data && e.data.size && REC.ch.push(e.data); REC.mr.start(200);
@@ -176,8 +201,50 @@ async function encodeGif() {
   parts.push(new Uint8Array([0x3B])); showResult(new Blob(parts, { type: 'image/gif' }), 'image/gif', 'gif');
 }
 
+/* ----- 자동 저장 · 백업 · 초기화 ----- */
+const DEF = JSON.parse(JSON.stringify(S)), TRANSIENT = ['play', 'wplay'];
+let loaded = false, lastJ = '', savedAt = 0;
+const snap = () => { const o = {}; for (const k in DEF) if (!TRANSIENT.includes(k)) o[k] = S[k]; return o; };
+function applyState(o) {
+  for (const k in DEF) {
+    if (TRANSIENT.includes(k) || !o || !(k in o)) continue; const d = DEF[k], v = o[k];
+    if (v === null || typeof v !== typeof d || Array.isArray(v) !== Array.isArray(d)) continue;
+    S[k] = (typeof d === 'object' && !Array.isArray(d)) ? Object.assign({}, d, v) : v;
+  }
+  S.lyr = S.lyr.map(String); if (!S.lyr.length) S.lyr = ['']; S.cur = Math.max(0, Math.min(S.cur, S.lyr.length - 1));
+  S.np = Math.max(1, Math.min(S.np, S.tracks.length || 1)); S.play = false; S.wplay = false; if (!DIM[S.mode]) S.mode = 'lyric';
+}
+function afterApply() { [...mb.children].forEach((c, i) => c.classList.toggle('on', MODES[i][0] === S.mode)); buildPanel(); fit(); render(); needs = true; }
+const idb = () => new Promise((res, rej) => { const r = indexedDB.open('music-ui-editor', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const kvGet = async k => { const d = await idb(); return new Promise((res, rej) => { const q = d.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); };
+const kvSet = async (k, v) => { const d = await idb(); return new Promise((res, rej) => { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); };
+function setNote() { const n = $('#panel .hint:not(.big):empty, #panel .hint[data-note]'); if (!n) return; n.dataset.note = 1; n.textContent = savedAt ? '자동 저장됨 · ' + new Date(savedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '아직 저장 전이에요'; }
+async function saveNow() {
+  if (!loaded || REC.on) return; const j = JSON.stringify(snap()); if (j === lastJ) return;
+  try { await kvSet('state', j); lastJ = j; savedAt = Date.now(); setNote(); } catch (e) { }
+}
+async function loadSaved() {
+  try { const j = await kvGet('state'); if (j) { applyState(JSON.parse(j)); lastJ = j; savedAt = Date.now(); afterApply(); } } catch (e) { }
+  loaded = true; try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) { }
+}
+setInterval(() => { if (!playing()) saveNow(); }, 2000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveNow(); }); addEventListener('pagehide', saveNow);
+function backupFile() {
+  const blob = new Blob([JSON.stringify({ app: 'music-ui-editor', v: 1, saved: new Date().toISOString(), data: snap() })], { type: 'application/json' }), name = `music-ui-backup-${new Date().toISOString().slice(0, 10)}.json`, file = new File([blob], name, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ files: [file] }).catch(() => { });
+  else { const l = el('a'); l.href = URL.createObjectURL(blob); l.download = name; document.body.append(l); l.click(); setTimeout(() => { URL.revokeObjectURL(l.href); l.remove(); }, 1000); }
+}
+function restoreFile() {
+  const f = el('input'); f.type = 'file'; f.accept = '.json,application/json'; f.onchange = () => {
+    const r = new FileReader(); r.onload = () => { try { const o = JSON.parse(r.result); if (o.app !== 'music-ui-editor' || !o.data) throw 0; if (!confirm('지금 편집 중인 내용이 백업 내용으로 바뀌어요. 계속할까요?')) return; applyState(o.data); afterApply(); saveNow(); } catch (e) { alert('백업 파일이 아니에요. 이 에디터에서 저장한 .json 파일을 골라 주세요.'); } }; r.readAsText(f.files[0]);
+  }; f.click();
+}
+function resetAll() { if (!confirm('모든 편집 내용을 처음 상태로 되돌려요. 되돌릴 수 없으니 먼저 [백업 파일 저장]을 추천해요. 계속할까요?')) return; applyState(JSON.parse(JSON.stringify(DEF))); afterApply(); saveNow(); }
+
 /* ----- 시작 ----- */
 const MODES = [['lyric', '가사'], ['list', '재생목록'], ['pad', '아이패드'], ['pod', '아이팟'], ['widget', '잠금화면']], mb = $('#modes');
 MODES.forEach(([k, l]) => { const b = el('button', k === S.mode ? 'on' : '', l); b.onclick = () => { S.mode = k; [...mb.children].forEach((c, i) => c.classList.toggle('on', MODES[i][0] === k)); buildPanel(); fit(); b.scrollIntoView({ inline: 'center', block: 'nearest' }); $('#panel').scrollTop = 0; }; mb.append(b); });
 $('#saveBtn').onclick = savePNG; $('#fab').onclick = () => act('play'); $('#rec').onclick = recToggle; addEventListener('resize', fit);
 buildPanel(); fit(); requestAnimationFrame(frame);
+$('#zoom').onclick = () => { const f = $('.stage').classList.toggle('full'); $('#zoom').textContent = f ? '✕ 닫기' : '⤢ 크게'; fit(); };
+loadSaved();
