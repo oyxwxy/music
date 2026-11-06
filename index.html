@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Music UI Editor</title>
+<link rel="stylesheet" href="style.css?v=20261106a">
+</head>
+<body>
+<header class="top">
+  <nav><div class="seg" id="modes"></div></nav>
+  <button class="btn pri" id="saveBtn">저장</button>
+</header>
+<main>
+  <section class="stage">
+    <canvas id="cv"></canvas>
+    <div class="sctl">
+      <button class="fab" id="fab" hidden>▶</button>
+      <button class="rec" id="rec">● 녹화</button>
+    </div>
+  </section>
+  <aside id="panel"></aside>
+</main>
+<div id="pop" hidden></div>
+<div id="modal" hidden></div>
+<script src="core.js?v=20261106a"></script>
+<script src="render.js?v=20261106a"></script>
+<script src="ui.js?v=20261106a"></script>
+<script src="app.js?v=20261106a"></script>
+</body>
+</html>
