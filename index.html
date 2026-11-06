@@ -8,20 +8,22 @@
 </head>
 <body>
 <header class="top">
-  <h1>Music UI</h1>
   <nav><div class="seg" id="modes"></div></nav>
-  <button class="btn pri" id="saveBtn">이미지 저장</button>
+  <button class="btn pri" id="saveBtn">저장</button>
 </header>
 <main>
-  <section class="stage"><div id="stageBox"><div id="scale"><div id="view"></div></div></div><button class="btn pri" id="pvBtn">▶ 움직임 미리보기</button></section>
+  <section class="stage">
+    <canvas id="cv"></canvas>
+    <button class="fab" id="fab" hidden>▶</button>
+    <button class="rec" id="rec">● 녹화</button>
+  </section>
   <aside id="panel"></aside>
 </main>
 <div id="pop" hidden></div>
 <div id="modal" hidden></div>
-<!-- 이미지 저장용. 직접 호스팅하려면 이 파일을 내려받아 같은 폴더에 두고 경로만 바꾸세요 -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="anim.js"></script>
-<script src="tools.js"></script>
+<script src="core.js"></script>
+<script src="render.js"></script>
+<script src="ui.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
