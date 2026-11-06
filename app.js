@@ -1,10 +1,27 @@
 'use strict';
 /* app.js : 화면 연결, 재생/조작, 편집 패널, 저장·녹화 */
 const cv = $('#cv'), cx = cv.getContext('2d'), REC = { on: false }; let last = performance.now(), syncT = 0;
+const isMob = () => innerWidth <= 960;
 function fit() {
-  const [w, h] = DIM[S.mode], avail = $('.stage').clientWidth - 24, maxH = innerWidth < 960 ? innerHeight * .46 : innerHeight - 130, k = Math.min(avail / w, maxH / h, 1.6);
+  const st = $('.stage'), [w, h] = DIM[S.mode], mob = isMob();
+  const avail = st.clientWidth - (mob ? 16 : 24);
+  const ctl = mob && S.mode !== 'list' ? 52 : 0;
+  const maxH = mob ? st.clientHeight - 16 - ctl : innerHeight - 130;
+  const k = Math.max(.1, Math.min(avail / w, maxH / h, 1.6));
   cv.style.width = w * k + 'px'; cv.style.height = h * k + 'px'; cv._s = Math.min(3, Math.max(1.5, k * (devicePixelRatio || 1))); needs = true;
 }
+/* 키보드/주소창에 맞춰 앱 높이 보정 (iOS) */
+(function () {
+  const vv = window.visualViewport; if (!vv) return;
+  const sync = () => {
+    document.documentElement.style.setProperty('--app-h', vv.height + 'px');
+    document.body.style.top = (isMob() ? vv.offsetTop : 0) + 'px';
+    document.body.classList.toggle('kb', isMob() && vv.height < screen.height * .72 && innerHeight - vv.height > 120);
+    fit();
+  };
+  vv.addEventListener('resize', sync); vv.addEventListener('scroll', sync); sync();
+})();
+if (window.ResizeObserver) { let pw = 0, ph = 0; new ResizeObserver(() => { const s = $('.stage'), w = s.clientWidth, h = isMob() ? s.clientHeight : 0; if (w !== pw || h !== ph) { pw = w; ph = h; fit(); } }).observe($('.stage')); }
 function draw() {
   const [w, h] = DIM[S.mode], s = cv._s || 2, W = Math.round(w * s), H = Math.round(h * s); if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, W, H); cx.setTransform(s, 0, 0, s, 0, 0); R.hits = []; paint(cx, REC.on);
@@ -51,6 +68,7 @@ function frame(now) { const dt = Math.min(.1, (now - last) / 1000); last = now; 
 /* ----- 편집 패널 ----- */
 const PG = {};
 const stCard = (ipad, pod) => card('상태 표시줄', ...(pod ? [] : [F('네트워크', SEG('net', [['wifi', '와이파이'], ['5g', '5G'], ['lte', 'LTE'], ['none', '없음']]))]), ...(ipad || pod ? [] : [F('신호 세기', RG('sig', 0, 4, 1, v => v + '칸'))]), F('배터리 (20% 이하는 빨간색)', RG('batt', 1, 100, 1, v => v + '%')), TG('chg', '충전 중 (초록 + 번개)'), ...(pod ? [] : [TG('lowp', '저전력 모드 (노란색)')]));
+function nextTg() { const t = TG('rnext', '녹화 중 다음 곡으로 넘기기'); t.firstChild.addEventListener('change', () => buildPanel()); return t; }
 function buildPanel() {
   ups = []; const p = $('#panel'), m = S.mode, pg = PG[m] || 'c'; p.innerHTML = '';
   const tabs = el('div', 'seg ptabs'); [['c', '내용'], ['d', '디자인'], ['x', '내보내기']].forEach(([k, l]) => { const b = el('button', k === pg ? 'on' : '', l); b.onclick = () => { PG[m] = k; buildPanel(); }; tabs.append(b); }); p.append(tabs);
@@ -59,11 +77,12 @@ function buildPanel() {
   const tracks = () => card('곡 목록', trackEd());
   const time = () => card('재생 시간', F('현재 위치 (재생바)', RG('el', 0, 0, 1, fmt, () => S.tot)), two(F('현재 (분:초)', durTM('el')), F('총 길이 (분:초)', totTM())), ...(m === 'widget' ? [TG('wph', '시간 대기 표시 (–:––)')] : []));
   const next = () => card('다음 곡 (다음 버튼을 누르면 바뀌어요)', F('제목', T('nx_title')), F('아티스트', T('nx_artist')), F('길이 (분:초)', dTM('nx_tot')));
+  const nextLite = () => card('다음 곡 (자동 녹화 중 넘길 때 바뀌어요)', F('제목', T('nx_title')), F('아티스트', T('nx_artist')));
   const lyr = () => card('가사', LyrEd(), F('가사 넘어가는 속도 (한 줄당)', RG('lineSec', 1, 8, .5, v => v + '초')));
   const cols = () => card('배경 색', F('배경 1 · 2', two(COL('c1'), COL('c2'))), F('배경 3', COL('c3')));
   const clock = () => F('시간 (24시간)', clockTM(() => S.clock));
   const X = {
-    lyric: { c: [song, lyr], d: [cols, () => card('화면', F('글자 크기', RG('fs', 22, 40, 1, v => v + 'px')), TG('star', '별 버튼'), TG('sbar', '상태바 표시'), clock()), stCard] },
+    lyric: { c: [song, lyr, nextLite], d: [cols, () => card('화면', F('글자 크기', RG('fs', 22, 40, 1, v => v + 'px')), TG('star', '별 버튼'), TG('sbar', '상태바 표시'), clock()), stCard] },
     list: { c: [plist, tracks], d: [() => card('화면', TG('dark', '다크 모드'), F('글자 크기', RG('lfs', 70, 120, 1, v => v + '%')), TG('sbar', '상태바 표시'), clock()), stCard] },
     pad: { c: [song, lyr, time, next], d: [cols, () => card('화면', F('가사 글자 크기', RG('pfs', 30, 60, 1, v => v + 'px')), TG('star', '별 버튼')), () => card('상단 시간 · 날짜', F('시간', TM({ get: () => S.pclock.h, set: n => mut(() => S.pclock.h = n), min: 1, max: 12 }, { get: () => S.pclock.m, set: n => mut(() => S.pclock.m = n), min: 0, max: 59, pad: 1 })), F('오전 / 오후', SEG('ap', [['AM', '오전'], ['PM', '오후']])), F('날짜 형식', SEG('dfmt', [['en', 'Thu Sep 26'], ['ko', '9월 26일 (목)']])), F('날짜 선택', CAL('date'))), () => stCard(true)] },
     pod: { c: [song, time, next], d: [() => card('아이팟', F('본체 프리셋', SEG('podpre', [['silver', '실버'], ['black', '블랙'], ['white', '화이트']], v => { const q = { silver: ['#cfcfcf', '#ffffff'], black: ['#262626', '#333333'], white: ['#f2f2f2', '#ffffff'] }[v]; S.podb = q[0]; S.podw = q[1]; })), two(F('본체 색', COL('podb')), F('휠 색', COL('podw'))), F('상단 문구', T('bar')), TG('pshuf', '셔플 아이콘')), () => stCard(false, true)] },
@@ -72,7 +91,7 @@ function buildPanel() {
   if (pg === 'x') {
     const b = (t, f, c = 'btn pri big') => { const x = el('button', c, t); x.onclick = f; return x; };
     p.append(card('이미지로 저장', ...(m === 'pod' || m === 'widget' ? [] : [TG('round', '모서리 둥글게 (모서리가 투명해요)')]), b('PNG로 저장', savePNG)));
-    if (m !== 'list') p.append(card('움짤 · 영상 만들기', el('div', 'hint big', '1. 형식을 고르고 [녹화 시작]을 눌러요.<br>2. 왼쪽 화면을 직접 눌러 보세요. ▶ 재생, 재생바 끌기, 다음 곡 누르기 … 누르는 그대로 담겨요.<br>3. 끝나면 [■ 정지]를 누르면 완성돼요. (재생 속도는 실제 속도 그대로예요)'), F('형식', SEG('fmt', [['video', '영상'], ['gif', 'GIF 움짤']])), F('GIF 크기 (클수록 용량이 커요)', SEG('gsc', [[.5, '작게'], [.75, '보통'], [1, '크게']])), b('● 녹화 시작', recToggle)));
+    if (m !== 'list') p.append(card('움짤 · 영상 만들기', el('div', 'hint big', '1. 형식을 고르고 [녹화 시작]을 눌러요.<br>2. 왼쪽 화면을 직접 눌러 보세요. ▶ 재생, 재생바 끌기, 다음 곡 누르기 … 누르는 그대로 담겨요.<br>3. 끝나면 [■ 정지]를 누르면 완성돼요. (재생 속도는 실제 속도 그대로예요)'), F('녹화 방식', SEG('rmode', [['manual', '직접 조작'], ['auto', '자동 재생']], buildPanel)), ...(S.rmode === 'auto' ? [el('div', 'hint', '지금 화면 상태 그대로 재생을 켜고, 정한 시간이 지나면 알아서 멈춰요. 가사는 지금 줄부터 넘어가요.'), F('녹화 길이', RG('rsec', 3, 30, 1, v => v + '초')), nextTg(), ...(S.rnext ? [F('다음 곡으로 넘기는 시점', RG('rnextAt', 1, 29, 1, v => v + '초 뒤', () => Math.max(1, S.rsec - 1)))] : [])] : []), F('형식', SEG('fmt', [['video', '영상'], ['gif', 'GIF 움짤']])), F('GIF 크기 (클수록 용량이 커요)', SEG('gsc', [[.5, '작게'], [.75, '보통'], [1, '크게']])), b(S.rmode === 'auto' ? '● 자동 녹화 시작' : '● 녹화 시작', recToggle)));
   } else X[m][pg].forEach(f => p.append(f()));
   upd();
 }
@@ -95,6 +114,7 @@ function recToggle() { REC.on ? recStop() : recStart(); }
 function recStart() {
   if (S.fmt === 'video' && !window.MediaRecorder) { alert('이 브라우저는 영상 녹화를 지원하지 않아요. GIF를 골라 주세요.'); return; }
   REC.snap = {}; KEEP.forEach(k => REC.snap[k] = S[k]); REC.on = true; REC.t0 = performance.now(); needs = true;
+  if (S.rmode === 'auto') { if (S.mode === 'widget') { S.wplay = true; S.wph = false; } else S.play = true; REC.to = setTimeout(recStop, S.rsec * 1000); if (S.rnext) REC.tn = setTimeout(() => { if (REC.on) { swapTrack(); needs = true; render(); upd(); } }, Math.min(S.rnextAt, Math.max(1, S.rsec - 1)) * 1000); render(); upd(); }
   if (S.fmt === 'video') {
     const mt = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(t => MediaRecorder.isTypeSupported(t)) || ''; REC.ch = [];
     REC.mr = new MediaRecorder(cv.captureStream(30), mt ? { mimeType: mt, videoBitsPerSecond: 8e6 } : { videoBitsPerSecond: 8e6 }); REC.mr.ondataavailable = e => e.data && e.data.size && REC.ch.push(e.data); REC.mr.start(200);
@@ -104,7 +124,7 @@ function recStart() {
   }
 }
 async function recStop() {
-  if (!REC.on) return; const fmt = S.fmt; clearInterval(REC.iv);
+  if (!REC.on) return; const fmt = S.fmt; clearInterval(REC.iv); clearTimeout(REC.to); clearTimeout(REC.tn);
   if (fmt === 'video') await new Promise(r => { REC.mr.onstop = r; REC.mr.stop(); });
   REC.on = false; KEEP.forEach(k => S[k] = REC.snap[k]); needs = true; upd(); syncUI();
   if (fmt === 'video') { const type = (REC.mr.mimeType || 'video/webm').split(';')[0]; showResult(new Blob(REC.ch, { type }), type, type.includes('mp4') ? 'mp4' : 'webm'); } else await encodeGif();
@@ -158,6 +178,6 @@ async function encodeGif() {
 
 /* ----- 시작 ----- */
 const MODES = [['lyric', '가사'], ['list', '재생목록'], ['pad', '아이패드'], ['pod', '아이팟'], ['widget', '잠금화면']], mb = $('#modes');
-MODES.forEach(([k, l]) => { const b = el('button', k === S.mode ? 'on' : '', l); b.onclick = () => { S.mode = k; [...mb.children].forEach((c, i) => c.classList.toggle('on', MODES[i][0] === k)); buildPanel(); fit(); }; mb.append(b); });
+MODES.forEach(([k, l]) => { const b = el('button', k === S.mode ? 'on' : '', l); b.onclick = () => { S.mode = k; [...mb.children].forEach((c, i) => c.classList.toggle('on', MODES[i][0] === k)); buildPanel(); fit(); b.scrollIntoView({ inline: 'center', block: 'nearest' }); $('#panel').scrollTop = 0; }; mb.append(b); });
 $('#saveBtn').onclick = savePNG; $('#fab').onclick = () => act('play'); $('#rec').onclick = recToggle; addEventListener('resize', fit);
 buildPanel(); fit(); requestAnimationFrame(frame);

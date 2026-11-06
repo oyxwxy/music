@@ -23,6 +23,6 @@ const S = {
   nx_title: 'Next Song', nx_artist: 'Artist', nx_tot: 200,
   podb: '#cfcfcf', podw: '#ffffff', bar: 'Now Playing', pshuf: true,
   wc: '#969696', wt: '#f6f6f6', wbg: '#efefef', wtr: true, wph: true, wplay: false, wdots: true,
-  fmt: 'video', gsc: .75
+  fmt: 'video', gsc: .75, rmode: 'manual', rsec: 10, rnext: false, rnextAt: 5
 };
 Object.defineProperty(S, 'ap', { get() { return S.pclock.ap; }, set(v) { S.pclock.ap = v; }, enumerable: false });
