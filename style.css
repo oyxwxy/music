@@ -107,8 +107,12 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:16px;padding:16p
 .lytx textarea{display:block;width:100%;min-height:150px;border:0;border-radius:12px;background:var(--fill);padding:12px 14px;font-size:17px;line-height:1.55;outline:0;resize:none;overflow:hidden}.lytx textarea:focus{box-shadow:0 0 0 2px var(--red)}
 .scroll-pad{height:0}
 @media(max-width:960px){
-  body.kb .sctl,body.kb .zoom{display:none}
+  body.kb .sctl,body.kb .zoom,body.kb .ptabs{display:none}
   body.kb #kbdone{display:block;position:absolute;right:10px;bottom:10px;z-index:45;height:44px;padding:0 20px;border:0;border-radius:22px;background:var(--red);color:#fff;font-weight:700;box-shadow:0 2px 12px rgba(0,0,0,.35)}
   body.kb #panel{padding-bottom:70px}
-  .ptabs{scroll-margin-top:60px}#panel input,#panel textarea{scroll-margin-top:64px;scroll-margin-bottom:70px}
+  .ptabs{scroll-margin-top:60px}#panel input,#panel textarea{scroll-margin-top:16px;scroll-margin-bottom:70px}
 }
+
+.stage{touch-action:none}#cv{transform-origin:50% 50%}
+.zreset{position:absolute;top:8px;right:8px;z-index:4;height:36px;padding:0 12px;border:0;border-radius:18px;background:var(--red);color:#fff;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+@media(max-width:960px){.zreset{right:100px}.stage.full .zreset{top:calc(8px + env(safe-area-inset-top,0px))}body.kb .zreset{display:none}}

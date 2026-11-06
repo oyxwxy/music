@@ -9,8 +9,40 @@ function fit() {
   const ctl = mob && S.mode !== 'list' && !document.body.classList.contains('kb') ? 52 : 0;
   const maxH = mob ? st.clientHeight - padY - ctl : innerHeight - 130;
   const k = Math.max(.1, Math.min(avail / w, maxH / h, 1.6));
-  cv.style.width = w * k + 'px'; cv.style.height = h * k + 'px'; cv._s = Math.min(3, Math.max(1.5, k * (devicePixelRatio || 1))); needs = true;
+  cv.style.width = w * k + 'px'; cv.style.height = h * k + 'px'; const zz = REC.on ? 1 : Z.z; cv._s = Math.min(zz > 1 ? 3.5 : 3, Math.max(1.5, k * zz * (devicePixelRatio || 1))); needs = true;
 }
+/* ----- 미리보기 확대/축소 (두 손가락, 더블탭, Ctrl+휠) ----- */
+const Z = { z: 1, x: 0, y: 0 }, zp = new Map(); let zg = null, zT = 0, zTap = null, zFit = 0;
+function zApply() {
+  const lim = (d, z) => (d * z - d) / 2 + d * .1, w = cv.offsetWidth, h = cv.offsetHeight;
+  Z.z = Math.min(5, Math.max(1, Z.z)); if (Z.z === 1) { Z.x = 0; Z.y = 0; } else { Z.x = Math.max(-lim(w, Z.z), Math.min(lim(w, Z.z), Z.x)); Z.y = Math.max(-lim(h, Z.z), Math.min(lim(h, Z.z), Z.y)); }
+  cv.style.transform = Z.z === 1 ? '' : `translate(${Z.x}px,${Z.y}px) scale(${Z.z})`; const zr = $('#zreset'); zr.hidden = Z.z === 1; zr.textContent = Math.round(Z.z * 100) + '%';
+  clearTimeout(zFit); zFit = setTimeout(() => { if (!REC.on) fit(); }, 250);
+}
+function zReset() { Z.z = 1; Z.x = 0; Z.y = 0; zApply(); }
+const zCenter = () => { const b = cv.getBoundingClientRect(); return { x: b.left + b.width / 2 - Z.x, y: b.top + b.height / 2 - Z.y }; };
+function zAt(nz, mx, my, c = zCenter()) { const a = { x: (mx - c.x - Z.x) / Z.z, y: (my - c.y - Z.y) / Z.z }; Z.z = Math.min(5, Math.max(1, nz)); Z.x = mx - c.x - Z.z * a.x; Z.y = my - c.y - Z.z * a.y; zApply(); }
+(() => {
+  const st = $('.stage'), mid = () => { const [p, q] = [...zp.values()]; return { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2, d: Math.hypot(p.x - q.x, p.y - q.y) || 1 }; };
+  st.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) return; zp.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (zp.size === 2) { R.press = null; dragH = null; render(); const m = mid(); zg = { d: m.d, z: Z.z, c: zCenter(), a: { x: (m.x - zCenter().x - Z.x) / Z.z, y: (m.y - zCenter().y - Z.y) / Z.z } }; }
+    else if (zp.size === 1) { zg = { pan: !find(pt(e)), sx: e.clientX, sy: e.clientY, x0: Z.x, y0: Z.y, moved: false }; }
+  });
+  st.addEventListener('pointermove', e => {
+    if (!zp.has(e.pointerId)) return; zp.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (!zg) return;
+    if (zp.size >= 2 && zg.a) { const m = mid(); Z.z = Math.min(5, Math.max(1, zg.z * m.d / zg.d)); Z.x = m.x - zg.c.x - Z.z * zg.a.x; Z.y = m.y - zg.c.y - Z.z * zg.a.y; zApply(); }
+    else if (zg.pan !== undefined) { const dx = e.clientX - zg.sx, dy = e.clientY - zg.sy; if (Math.hypot(dx, dy) > 8) zg.moved = true; if (zg.pan && Z.z > 1) { Z.x = zg.x0 + dx; Z.y = zg.y0 + dy; zApply(); } }
+  });
+  const up = e => {
+    if (!zp.has(e.pointerId)) return; const was = zg; zp.delete(e.pointerId);
+    if (zp.size === 0) { if (was && was.pan && !was.moved && e.type === 'pointerup') { const t = performance.now(); if (zTap && t - zTap.t < 320 && Math.hypot(e.clientX - zTap.x, e.clientY - zTap.y) < 30) { if (Z.z > 1) zReset(); else zAt(2.2, e.clientX, e.clientY); zTap = null; } else zTap = { t, x: e.clientX, y: e.clientY }; } zg = null; }
+    else if (zp.size === 1) { const [p] = [...zp.values()]; zg = { pan: true, sx: p.x, sy: p.y, x0: Z.x, y0: Z.y, moved: true }; }
+  };
+  st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
+  st.addEventListener('wheel', e => { if (!(e.ctrlKey || e.metaKey)) return; e.preventDefault(); zAt(Z.z * Math.exp(-e.deltaY * .01), e.clientX, e.clientY); }, { passive: false });
+  $('#zreset').onclick = zReset;
+})();
 /* 키보드/주소창에 맞춰 앱 높이 보정 (iOS) */
 (function () {
   const vv = window.visualViewport; if (!vv) return;
@@ -245,10 +277,10 @@ function resetAll() { if (!confirm('모든 편집 내용을 처음 상태로 되
 
 /* ----- 시작 ----- */
 const MODES = [['lyric', '가사'], ['list', '재생목록'], ['pad', '아이패드'], ['pod', '아이팟'], ['widget', '잠금화면']], mb = $('#modes');
-MODES.forEach(([k, l]) => { const b = el('button', k === S.mode ? 'on' : '', l); b.onclick = () => { S.mode = k; [...mb.children].forEach((c, i) => c.classList.toggle('on', MODES[i][0] === k)); buildPanel(); fit(); b.scrollIntoView({ inline: 'center', block: 'nearest' }); $('#panel').scrollTop = 0; }; mb.append(b); });
+MODES.forEach(([k, l]) => { const b = el('button', k === S.mode ? 'on' : '', l); b.onclick = () => { S.mode = k; [...mb.children].forEach((c, i) => c.classList.toggle('on', MODES[i][0] === k)); zReset(); buildPanel(); fit(); b.scrollIntoView({ inline: 'center', block: 'nearest' }); $('#panel').scrollTop = 0; }; mb.append(b); });
 $('#saveBtn').onclick = savePNG; $('#fab').onclick = () => act('play'); $('#rec').onclick = recToggle; addEventListener('resize', fit);
 buildPanel(); fit(); requestAnimationFrame(frame);
 $('#kbdone').onclick = () => document.activeElement && document.activeElement.blur();
 document.addEventListener('focusin', e => { const t = e.target; if (isMob() && t.closest && t.closest('#panel') && /^(INPUT|TEXTAREA)$/.test(t.tagName)) setTimeout(() => t.scrollIntoView({ block: t.tagName === 'TEXTAREA' ? 'nearest' : 'center', behavior: 'smooth' }), 350); });
-$('#zoom').onclick = () => { const f = $('.stage').classList.toggle('full'); $('#zoom').textContent = f ? '✕ 닫기' : '⤢ 크게'; fit(); };
+$('#zoom').onclick = () => { const f = $('.stage').classList.toggle('full'); $('#zoom').textContent = f ? '✕ 닫기' : '⤢ 크게'; zReset(); fit(); };
 loadSaved();
